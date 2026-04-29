@@ -1,5 +1,10 @@
-// Workers entrypoint — phase 2 wires actual queues + processors.
-// eslint-disable-next-line no-console
-console.warn('ilinga-workers booted (phase 0 stub)');
+/* eslint-disable no-console */
+import { startScanWorker } from './scan.js';
 
-export const phase = 0;
+if (import.meta.url === `file://${process.argv[1]}`) {
+  console.warn('ilinga-workers booting');
+  startScanWorker();
+}
+
+export { startScanWorker };
+export const phase = 5;
