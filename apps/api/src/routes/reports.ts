@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { schema, getDb } from '@ilinga/db';
 import { requireAuth, requireCsrf, requireTenantMembership } from '../lib/guard.js';
 import { renderTemplate } from '../lib/reports/handlebars.js';
@@ -95,6 +95,31 @@ reportRoutes.post('/tenant/:tid/render', requireTenantMembership('tid'), async (
 reportRoutes.get('/tenant/:tid/cycle/:cid', requireTenantMembership('tid'), async (c) => {
   const reports = await listReports(c.req.param('tid'), c.req.param('cid'));
   return c.json({ reports });
+});
+
+reportRoutes.get('/:rid', async (c) => {
+  const db = getDb();
+  const userId = c.get('userId') as string;
+  const rep = await db
+    .select()
+    .from(schema.reports)
+    .where(eq(schema.reports.id, c.req.param('rid')))
+    .limit(1);
+  if (!rep[0]) throw notFound();
+  // tenant scope check
+  const member = await db
+    .select()
+    .from(schema.tenantMembers)
+    .where(
+      and(eq(schema.tenantMembers.tenantId, rep[0].tenantId), eq(schema.tenantMembers.userId, userId)),
+    )
+    .limit(1);
+  if (!member[0]) throw notFound();
+  const renders = await db
+    .select()
+    .from(schema.reportRenders)
+    .where(eq(schema.reportRenders.reportId, rep[0].id));
+  return c.json({ report: rep[0], renders });
 });
 
 reportRoutes.post(

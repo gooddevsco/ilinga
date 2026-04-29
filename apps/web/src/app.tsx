@@ -17,6 +17,9 @@ import { Ventures } from './pages/app/Ventures';
 import { VentureNew } from './pages/app/VentureNew';
 import { VentureDetail } from './pages/app/VentureDetail';
 import { Interview } from './pages/app/Interview';
+import { Synthesis } from './pages/app/Synthesis';
+import { CycleReports } from './pages/app/CycleReports';
+import { ReportViewer } from './pages/app/ReportViewer';
 import { Reports } from './pages/app/Reports';
 import { Credits } from './pages/app/Credits';
 import {
@@ -69,7 +72,10 @@ export const App = (): JSX.Element => (
         <Route path="/ventures/new" element={<VentureNew />} />
         <Route path="/ventures/:id" element={<VentureDetail />} />
         <Route path="/ventures/:vid/cycles/:cid/interview" element={<Interview />} />
+        <Route path="/ventures/:vid/cycles/:cid/synthesis" element={<Synthesis />} />
+        <Route path="/ventures/:vid/cycles/:cid/reports" element={<CycleReports />} />
         <Route path="/reports" element={<Reports />} />
+        <Route path="/reports/:id" element={<ReportViewer />} />
         <Route path="/credits" element={<Credits />} />
         <Route path="/settings" element={<Navigate to="/settings/profile" replace />} />
         <Route path="/settings/*" element={<SettingsLayout />}>
