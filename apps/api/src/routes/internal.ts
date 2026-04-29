@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { config } from '../config.js';
+import { openapiSpec } from '../lib/openapi.js';
 
 export const healthRoutes = new Hono();
 
@@ -22,3 +23,5 @@ healthRoutes.get('/tls-allowed', (c) => {
   const host = c.req.query('domain');
   return c.json({ allowed: Boolean(host) });
 });
+
+healthRoutes.get('/openapi.json', (c) => c.json(openapiSpec));
