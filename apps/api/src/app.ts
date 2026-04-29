@@ -24,6 +24,9 @@ import { synthesisRoutes } from './routes/synthesis.js';
 import { n8nRoutes } from './routes/n8n.js';
 import { statusRoutes } from './routes/status.js';
 import { aiEndpointRoutes } from './routes/ai-endpoints.js';
+import { commentRoutes } from './routes/comments.js';
+import { activityRoutes } from './routes/activity.js';
+import { trashRoutes } from './routes/trash.js';
 
 export const buildApp = () => {
   const cfg = config();
@@ -60,6 +63,9 @@ export const buildApp = () => {
   app.route('/v1/n8n', n8nRoutes);
   app.route('/v1/status', statusRoutes);
   app.route('/v1/ai-endpoints', aiEndpointRoutes);
+  app.route('/v1/comments', commentRoutes);
+  app.route('/v1/activity', activityRoutes);
+  app.route('/v1/trash', trashRoutes);
 
   app.notFound((c) =>
     c.json(

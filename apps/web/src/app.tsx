@@ -23,6 +23,7 @@ import { CycleReports } from './pages/app/CycleReports';
 import { ReportViewer } from './pages/app/ReportViewer';
 import { Reports } from './pages/app/Reports';
 import { Credits } from './pages/app/Credits';
+import { Trash } from './pages/app/Trash';
 import {
   SettingsLayout,
   SettingsAi,
@@ -86,6 +87,7 @@ export const App = (): JSX.Element => (
         <Route path="/reports" element={<Reports />} />
         <Route path="/reports/:id" element={<ReportViewer />} />
         <Route path="/credits" element={<Credits />} />
+        <Route path="/trash" element={<Trash />} />
         <Route path="/settings" element={<Navigate to="/settings/profile" replace />} />
         <Route path="/settings/*" element={<SettingsLayout />}>
           <Route path="profile" element={<SettingsProfile />} />

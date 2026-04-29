@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { Badge, Card, CardBody, CardHeader, Skeleton } from '@ilinga/ui';
 import { api, type ApiError } from '../../lib/api';
 import { formatDateTZ } from '../../lib/format';
+import { Comments } from '../../features/comments/Comments';
 
 interface Report {
   id: string;
@@ -93,6 +94,11 @@ export const ReportViewer = (): JSX.Element => {
           <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-xs">
             {JSON.stringify(data.report.inputKeySnapshot, null, 2)}
           </pre>
+        </CardBody>
+      </Card>
+      <Card>
+        <CardBody>
+          <Comments target="reports" targetId={data.report.id} />
         </CardBody>
       </Card>
     </div>

@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { config } from '../config.js';
 import { openapiSpec } from '../lib/openapi.js';
+import { logger } from '../lib/logger.js';
 
 export const healthRoutes = new Hono();
 
@@ -25,3 +26,9 @@ healthRoutes.get('/tls-allowed', (c) => {
 });
 
 healthRoutes.get('/openapi.json', (c) => c.json(openapiSpec));
+
+healthRoutes.post('/bug', async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  logger().warn({ bug: body }, 'inbound bug report');
+  return c.json({ ok: true });
+});

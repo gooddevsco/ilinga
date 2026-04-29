@@ -4,12 +4,14 @@ import { Sheet } from '@ilinga/ui';
 import { useAuth } from '../lib/auth';
 import { useMaintenance } from '../lib/maintenance';
 import { useTenant } from '../lib/tenant';
+import { BugReportWidget } from '../features/bug-report/BugReportWidget';
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/ventures', label: 'Ventures' },
   { to: '/reports', label: 'Reports' },
   { to: '/credits', label: 'Credits' },
+  { to: '/trash', label: 'Trash' },
   { to: '/settings', label: 'Settings' },
 ];
 
@@ -138,6 +140,7 @@ export const AppLayout = (): JSX.Element => {
           </main>
         </div>
       </div>
+      <BugReportWidget />
     </div>
   );
 };
