@@ -40,9 +40,21 @@ export interface AuditRowLike {
 }
 
 export const computeRowHash = (row: AuditRowLike, prevHash: Buffer | null): Buffer => {
+  // Project to the canonical field set so callers can pass enriched rows
+  // (with prevHash + rowHash already attached) without polluting the hash.
+  const projection: AuditRowLike = {
+    tenantId: row.tenantId ?? null,
+    actorUserId: row.actorUserId ?? null,
+    impersonatorUserId: row.impersonatorUserId ?? null,
+    action: row.action,
+    targetTable: row.targetTable ?? null,
+    targetId: row.targetId ?? null,
+    payload: row.payload,
+    createdAt: row.createdAt,
+  };
   const h = createHash('sha256');
   if (prevHash) h.update(prevHash);
-  h.update(canonicalize(row));
+  h.update(canonicalize(projection));
   return h.digest();
 };
 

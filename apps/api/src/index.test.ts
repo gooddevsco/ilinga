@@ -39,13 +39,9 @@ describe('healthz', () => {
     expect(res.headers.get('content-type')).toMatch(/application\/problem\+json/);
   });
 
-  it('marks Phase 2 stubs with 501 problem+json', async () => {
-    const res = await app.request('/v1/auth/magic-link/request', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email: 'a@b' }),
-    });
-    expect(res.status).toBe(501);
-    expect(res.headers.get('content-type')).toMatch(/application\/problem\+json/);
+  it('reaches /v1/auth/csrf with no session', async () => {
+    const res = await app.request('/v1/auth/csrf');
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ csrf: null });
   });
 });

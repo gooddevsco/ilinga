@@ -18,11 +18,7 @@ const baseShell = (heading: string, body: string, ctaLabel?: string, ctaUrl?: st
       <mj-column>
         <mj-text font-size="22px" font-weight="600">${heading}</mj-text>
         <mj-text>${body}</mj-text>
-        ${
-          ctaLabel && ctaUrl
-            ? `<mj-button href="${ctaUrl}">${ctaLabel}</mj-button>`
-            : ''
-        }
+        ${ctaLabel && ctaUrl ? `<mj-button href="${ctaUrl}">${ctaLabel}</mj-button>` : ''}
         <mj-text css-class="footer">
           You received this email from Ilinga. If you didn't expect it, you can ignore it.<br/>
           Ilinga • EU region.
@@ -53,11 +49,20 @@ const stripTags = (s: string): string =>
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 
+interface MjmlResult {
+  html: string;
+  errors: { message: string }[];
+}
+
 export const render = (input: RenderInput): RenderedEmail => {
   const mjml = baseShell(input.heading, input.body, input.ctaLabel, input.ctaUrl);
-  const result = mjml2html(mjml, { validationLevel: 'strict' });
+  // mjml2html is synchronous in v4; the published @types overstates the
+  // return as a Promise. Cast through unknown so the runtime stays sync.
+  const result = mjml2html(mjml, { validationLevel: 'strict' }) as unknown as MjmlResult;
   if (result.errors.length > 0) {
-    throw new Error(`MJML render errors: ${result.errors.map((e) => e.message).join('; ')}`);
+    throw new Error(
+      `MJML render errors: ${result.errors.map((e: { message: string }) => e.message).join('; ')}`,
+    );
   }
   const text = `${input.heading}\n\n${stripTags(input.body)}\n\n${
     input.ctaLabel && input.ctaUrl ? `${input.ctaLabel}: ${input.ctaUrl}\n\n` : ''

@@ -51,16 +51,23 @@ class Hub {
     }
   }
 
-  subscribe(
-    key: string,
-    handler: (ev: SseEvent) => void,
-    sinceId?: string,
-  ): () => void {
+  subscribe(key: string, handler: (ev: SseEvent) => void, sinceId?: string): () => void {
     this.ensureRedisSubscribed();
     const buf = this.buffers.get(key);
     if (buf) {
-      const startIdx = sinceId ? buf.findIndex((e) => e.id === sinceId) : -1;
-      const replay = startIdx >= 0 ? buf.slice(startIdx + 1) : [];
+      let replay: SseEvent[];
+      if (!sinceId) {
+        replay = [];
+      } else {
+        const startIdx = buf.findIndex((e) => e.id === sinceId);
+        if (startIdx >= 0) {
+          replay = buf.slice(startIdx + 1);
+        } else {
+          // sinceId has been evicted from the ring buffer — replay everything
+          // still in the buffer; client re-syncs from there.
+          replay = buf.slice();
+        }
+      }
       for (const e of replay) handler(e);
     }
     const channel = `l:${key}`;

@@ -1,8 +1,9 @@
 import { defineConfig } from 'vitest/config';
-import react from '@vitejs/plugin-react';
 
+// vitest 2 brings vite 5 in by transitive types; Vite 6 ships separately for
+// the dev/build pipeline. We don't include @vitejs/plugin-react here — for the
+// few jsdom unit tests we run, vitest's esbuild handles JSX directly.
 export default defineConfig({
-  plugins: [react()],
   test: {
     environment: 'jsdom',
     include: ['src/**/*.test.{ts,tsx}'],

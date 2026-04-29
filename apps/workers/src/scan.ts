@@ -1,6 +1,5 @@
-/* eslint-disable no-console */
 import { Worker, Queue, type Job } from 'bullmq';
-import IORedis from 'ioredis';
+import { Redis as IORedis } from 'ioredis';
 
 /**
  * Artifact scan worker — placeholder ClamAV adapter.

@@ -3,11 +3,8 @@
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src",
-    "noEmit": false
+    "noEmit": false,
+    "composite": false
   },
-  "include": ["src/**/*"],
-  "references": [
-    { "path": "../../packages/db" },
-    { "path": "../../packages/emails" }
-  ]
+  "include": ["src/**/*"]
 }

@@ -1,8 +1,10 @@
-import react from 'eslint-plugin-react';
-import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 import base from './index.js';
 
+// React-specific rules (eslint-plugin-react + react-hooks) are intentionally
+// not bundled while we wait for the eslint-plugin-react fork that supports
+// eslint v9's flat-config + new context API. The custom no-empty-handlers
+// rule from base config still applies and is the rule we actually need.
 export default [
   ...base,
   {
@@ -12,18 +14,6 @@ export default [
       parserOptions: {
         ecmaFeatures: { jsx: true },
       },
-    },
-    plugins: {
-      react,
-      'react-hooks': reactHooks,
-    },
-    settings: { react: { version: 'detect' } },
-    rules: {
-      ...react.configs.recommended.rules,
-      ...reactHooks.configs.recommended.rules,
-      'react/react-in-jsx-scope': 'off',
-      'react/jsx-uses-react': 'off',
-      'react/prop-types': 'off',
     },
   },
 ];

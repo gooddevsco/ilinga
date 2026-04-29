@@ -1,16 +1,9 @@
 import { beforeAll, describe, it, expect } from 'vitest';
-import {
-  decryptWithDek,
-  encryptWithDek,
-  generateDek,
-  unwrapDek,
-  wrapDek,
-} from './kms.js';
+import { decryptWithDek, encryptWithDek, generateDek, unwrapDek, wrapDek } from './kms.js';
 
 describe('kms envelope encryption', () => {
   beforeAll(() => {
-    process.env.IL_KMS_KEK_HEX =
-      '000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f';
+    process.env.IL_KMS_KEK_HEX = '000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f';
   });
 
   it('round-trips a wrapped DEK', () => {
@@ -31,7 +24,8 @@ describe('kms envelope encryption', () => {
   it('rejects tampered ciphertext (auth tag check)', () => {
     const dek = generateDek();
     const ct = encryptWithDek(dek, 'sensitive');
-    ct[ct.length - 1] ^= 0xff;
+    const i = ct.length - 1;
+    ct[i] = (ct[i] ?? 0) ^ 0xff;
     expect(() => decryptWithDek(dek, ct)).toThrow();
   });
 

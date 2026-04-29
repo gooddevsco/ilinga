@@ -38,6 +38,16 @@ export const api = {
     if (!res.ok) await throwApiError(res);
     return (await res.json()) as T;
   },
+  async put<T>(path: string, body?: unknown): Promise<T> {
+    const res = await fetch(`${baseUrl}${path}`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: headers(),
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    if (!res.ok) await throwApiError(res);
+    return (await res.json()) as T;
+  },
   async patch<T>(path: string, body?: unknown): Promise<T> {
     const res = await fetch(`${baseUrl}${path}`, {
       method: 'PATCH',

@@ -1,6 +1,5 @@
-/* eslint-disable no-console */
 import { Worker, Queue, type Job } from 'bullmq';
-import IORedis from 'ioredis';
+import { Redis as IORedis } from 'ioredis';
 import { and, eq, isNull, lte } from 'drizzle-orm';
 import { schema, getDb, closeDb } from '@ilinga/db';
 
