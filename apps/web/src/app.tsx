@@ -15,6 +15,8 @@ import { GoogleCallback, MagicCallback } from './pages/auth/Callback';
 import { Dashboard } from './pages/app/Dashboard';
 import { Ventures } from './pages/app/Ventures';
 import { VentureNew } from './pages/app/VentureNew';
+import { VentureDetail } from './pages/app/VentureDetail';
+import { Interview } from './pages/app/Interview';
 import { Reports } from './pages/app/Reports';
 import { Credits } from './pages/app/Credits';
 import {
@@ -65,6 +67,8 @@ export const App = (): JSX.Element => (
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/ventures" element={<Ventures />} />
         <Route path="/ventures/new" element={<VentureNew />} />
+        <Route path="/ventures/:id" element={<VentureDetail />} />
+        <Route path="/ventures/:vid/cycles/:cid/interview" element={<Interview />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/credits" element={<Credits />} />
         <Route path="/settings" element={<Navigate to="/settings/profile" replace />} />

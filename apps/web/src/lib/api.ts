@@ -1,4 +1,4 @@
-const baseUrl =
+export const baseUrl =
   (import.meta.env['VITE_API_ORIGIN'] as string | undefined) ?? 'http://localhost:3001';
 
 export interface ApiError extends Error {

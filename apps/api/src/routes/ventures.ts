@@ -1,5 +1,7 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
+import { and, desc, eq } from 'drizzle-orm';
+import { schema, getDb } from '@ilinga/db';
 import { requireAuth, requireCsrf, requireTenantMembership } from '../lib/guard.js';
 import {
   cloneCycle,
@@ -41,6 +43,20 @@ ventureRoutes.get('/tenant/:tid/:vid', requireTenantMembership('tid'), async (c)
   const v = await getVenture(c.req.param('tid'), c.req.param('vid'));
   if (!v) throw notFound();
   return c.json({ venture: v });
+});
+
+ventureRoutes.get('/tenant/:tid/:vid/cycles', requireTenantMembership('tid'), async (c) => {
+  const rows = await getDb()
+    .select()
+    .from(schema.ventureCycles)
+    .where(
+      and(
+        eq(schema.ventureCycles.tenantId, c.req.param('tid')),
+        eq(schema.ventureCycles.ventureId, c.req.param('vid')),
+      ),
+    )
+    .orderBy(desc(schema.ventureCycles.seq));
+  return c.json({ cycles: rows });
 });
 
 const BriefBody = z.object({ brief: z.record(z.unknown()) });
