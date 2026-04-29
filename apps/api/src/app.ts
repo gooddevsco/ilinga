@@ -23,6 +23,7 @@ import { tokenRoutes } from './routes/api-tokens.js';
 import { synthesisRoutes } from './routes/synthesis.js';
 import { n8nRoutes } from './routes/n8n.js';
 import { statusRoutes } from './routes/status.js';
+import { aiEndpointRoutes } from './routes/ai-endpoints.js';
 
 export const buildApp = () => {
   const cfg = config();
@@ -58,6 +59,7 @@ export const buildApp = () => {
   app.route('/v1/synthesis', synthesisRoutes);
   app.route('/v1/n8n', n8nRoutes);
   app.route('/v1/status', statusRoutes);
+  app.route('/v1/ai-endpoints', aiEndpointRoutes);
 
   app.notFound((c) =>
     c.json(

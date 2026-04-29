@@ -25,11 +25,13 @@ import { Credits } from './pages/app/Credits';
 import {
   SettingsLayout,
   SettingsAi,
+  SettingsApiTokens,
   SettingsBilling,
   SettingsPrivacy,
   SettingsProfile,
   SettingsSecurity,
   SettingsTeam,
+  SettingsWebhooks,
 } from './pages/app/Settings';
 import {
   ForbiddenPage,
@@ -83,6 +85,8 @@ export const App = (): JSX.Element => (
           <Route path="team" element={<SettingsTeam />} />
           <Route path="billing" element={<SettingsBilling />} />
           <Route path="ai" element={<SettingsAi />} />
+          <Route path="webhooks" element={<SettingsWebhooks />} />
+          <Route path="api-tokens" element={<SettingsApiTokens />} />
           <Route path="security" element={<SettingsSecurity />} />
           <Route path="privacy" element={<SettingsPrivacy />} />
         </Route>

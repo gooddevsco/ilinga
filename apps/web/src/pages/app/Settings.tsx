@@ -456,3 +456,5 @@ export const SettingsBilling = (): JSX.Element => {
 export { SettingsAi } from './settings/Ai';
 export { SettingsSecurity } from './settings/Security';
 export { SettingsPrivacy } from './settings/Privacy';
+export { SettingsWebhooks } from './settings/Webhooks';
+export { SettingsApiTokens } from './settings/ApiTokens';
