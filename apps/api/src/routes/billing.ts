@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { eq } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { schema, getDb } from '@ilinga/db';
 import { config } from '../config.js';
 import { requireAuth, requireCsrf, requireTenantMembership } from '../lib/guard.js';
@@ -94,6 +94,37 @@ billingRoutes.get(
   async (c) => {
     const balance = await creditBalance(c.req.param('tid'));
     return c.json({ balance });
+  },
+);
+
+billingRoutes.get(
+  '/tenant/:tid/auto-topup',
+  requireAuth,
+  requireCsrf,
+  requireTenantMembership('tid'),
+  async (c) => {
+    const rows = await getDb()
+      .select()
+      .from(schema.autoTopups)
+      .where(eq(schema.autoTopups.tenantId, c.req.param('tid')))
+      .limit(1);
+    return c.json({ config: rows[0] ?? null });
+  },
+);
+
+billingRoutes.get(
+  '/tenant/:tid/invoices',
+  requireAuth,
+  requireCsrf,
+  requireTenantMembership('tid'),
+  async (c) => {
+    const rows = await getDb()
+      .select()
+      .from(schema.invoices)
+      .where(eq(schema.invoices.tenantId, c.req.param('tid')))
+      .orderBy(desc(schema.invoices.issuedAt))
+      .limit(100);
+    return c.json({ invoices: rows });
   },
 );
 
