@@ -6,6 +6,7 @@ import { ToastProvider } from '@ilinga/ui';
 import { ThemeProvider } from './lib/theme';
 import { ConsentProvider } from './lib/consent';
 import { AuthProvider } from './lib/auth';
+import { TenantProvider } from './lib/tenant';
 
 const el = document.getElementById('root');
 if (!el) throw new Error('#root not found');
@@ -16,7 +17,9 @@ createRoot(el).render(
       <ConsentProvider>
         <ToastProvider>
           <AuthProvider>
-            <App />
+            <TenantProvider>
+              <App />
+            </TenantProvider>
           </AuthProvider>
         </ToastProvider>
       </ConsentProvider>

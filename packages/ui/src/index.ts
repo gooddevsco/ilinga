@@ -12,3 +12,4 @@ export {
 export { Card, CardHeader, CardBody } from './Card.js';
 export { Badge, type BadgeTone } from './Badge.js';
 export { Modal, type ModalProps } from './Modal.js';
+export { Sheet, type SheetProps } from './Sheet.js';
