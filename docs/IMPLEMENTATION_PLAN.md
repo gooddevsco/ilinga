@@ -15,6 +15,32 @@ prescriptive: file paths, table names, column names, route paths, env var names.
 - **Auth**: Magic link, email OTP, password + TOTP (RFC 6238), Google OAuth 2.0
 - **Compliance targets**: SOC 2 Type II, GDPR, POPIA
 
+## Gap audit (post v1)
+
+After a design audit the original plan was missing or under-specified the
+items below. They are now covered in §16–§32:
+
+| Gap                                                     | Section                           |
+| ------------------------------------------------------- | --------------------------------- |
+| Transactional + marketing email (Resend / Postmark failover, deliverability) | §16              |
+| SMS (OTP, alerts) with Twilio + MessageBird failover    | §17                               |
+| Unified notifications (in-app, email, SMS, webhook)     | §18                               |
+| Usage-based metering, taxes, dunning, trials, coupons   | §19 (extends §8)                  |
+| Credit usage reporting per report/module/prompt/user    | §20                               |
+| n8n agent designer (in-app workflow CRUD + versioning)  | §21                               |
+| Export formats (PDF / HTML / DOCX / PPTX / MD), watermark, a11y | §22 (extends §10)         |
+| AI model registry (system + tenant + fine-tunes + embeddings) | §23 (extends §9)            |
+| Observability (logs, metrics, traces, errors, uptime)   | §24                               |
+| Search + global command palette                         | §25                               |
+| Backup & disaster recovery                              | §26                               |
+| SSO (SAML/OIDC) + SCIM provisioning (Enterprise plan)   | §27                               |
+| Tenant API tokens + OpenAPI + SDK generation            | §28                               |
+| Public status page + incident comms                     | §29                               |
+| Internationalisation + accessibility (WCAG 2.2 AA)      | §30                               |
+| Anti-abuse hardening (CAPTCHA, fraud, ATO defence)      | §31                               |
+| Light + dark theme as user-selectable options           | §15 (amended)                     |
+| End-to-end completeness checklist                       | §32                               |
+
 ## Phase ordering
 
 Each phase is independently shippable. Later phases depend on earlier ones.
@@ -36,6 +62,17 @@ Each phase is independently shippable. Later phases depend on earlier ones.
 | 12    | Compliance hardening (export, deletion, retention) | §12       |
 | 13    | Deployment (Caddy, PM2, GeoDNS)                  | §14         |
 | 14    | SOC 2 evidence hooks + load test                 | §12         |
+| 15    | Email + SMS + Notifications                       | §16, §17, §18 |
+| 16    | Billing depth (metering, tax, dunning, trials, coupons) | §19 |
+| 17    | Usage analytics + credit reporting                | §20         |
+| 18    | n8n Agent Designer                                | §21         |
+| 19    | Multi-format exports                              | §22         |
+| 20    | AI model registry                                 | §23         |
+| 21    | Observability + status page                       | §24, §29    |
+| 22    | Search + command palette                          | §25         |
+| 23    | Backup & DR drills                                | §26         |
+| 24    | SSO + SCIM + API tokens                           | §27, §28    |
+| 25    | i18n + a11y audit + anti-abuse                    | §30, §31    |
 
 ---
 
@@ -1663,68 +1700,82 @@ IL_CALLBACK_SECRET=<matches N8N_CALLBACK_SECRET>
 
 ---
 
-## §15 Dark theme (CSS only — Phase 1 of frontend work)
+## §15 Theming — light + dark with toggle (Phase 1 of frontend work)
 
-This is the first frontend deliverable: switch the prototype's CSS root tokens
-from light to dark while keeping all layout/components untouched. No JS theme
-toggle yet — single dark theme as the canonical look.
+Both themes ship from day one. Default = `system` (follow OS); user override persists in `users.ui_preferences.theme ∈ {light, dark, system}`. Token system is shared; values differ by `[data-theme]` attribute on `<html>`.
 
 ### 15.1 Tokens (`apps/web/src/styles/tokens.css`)
 
 ```css
+/* Shared (theme-agnostic) */
 :root {
-  /* Surface */
-  --surface-base:        #0E0B08;   /* warm near-black */
-  --surface-raised:      #15110D;
-  --surface-overlay:     #1B1611;
-  --surface-sunken:      #0A0806;
-
-  /* Border */
-  --border-subtle:       #2A231C;
-  --border-strong:       #3A3026;
-  --border-focus:        #D4622A;   /* terracotta */
-
-  /* Text */
-  --text-primary:        #F4ECE2;
-  --text-secondary:      #BFB1A0;
-  --text-tertiary:       #877867;
-  --text-inverse:        #0E0B08;
-
-  /* Signal (terracotta accent) */
-  --signal-50:           #2A1810;
-  --signal-200:          #6B3318;
-  --signal-400:          #B3501F;
-  --signal-500:          #D4622A;   /* primary */
-  --signal-600:          #E47A3F;
-  --signal-700:          #F09762;
-
-  /* Status */
-  --success:             #6FAE72;
-  --warning:             #D4A03C;
-  --danger:              #D45A4A;
-  --info:                #6FA3C7;
-
-  /* Data viz */
-  --chart-1: #D4622A;
-  --chart-2: #6FAE72;
-  --chart-3: #D4A03C;
-  --chart-4: #6FA3C7;
-  --chart-5: #B47AC0;
-
-  /* Typography */
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --signal-500: #D4622A;             /* terracotta accent — same in both themes */
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --font-display: 'Söhne', 'Inter', sans-serif;
-
-  /* Radii / shadows */
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.5);
-  --shadow-lg: 0 16px 40px rgba(0,0,0,0.6);
+}
 
+/* Dark (default) */
+:root, [data-theme='dark'] {
+  --surface-base:    #0E0B08;
+  --surface-raised:  #15110D;
+  --surface-overlay: #1B1611;
+  --surface-sunken:  #0A0806;
+  --border-subtle:   #2A231C;
+  --border-strong:   #3A3026;
+  --border-focus:    var(--signal-500);
+  --text-primary:    #F4ECE2;
+  --text-secondary:  #BFB1A0;
+  --text-tertiary:   #877867;
+  --text-inverse:    #0E0B08;
+  --signal-50:  #2A1810;
+  --signal-200: #6B3318;
+  --signal-400: #B3501F;
+  --signal-600: #E47A3F;
+  --signal-700: #F09762;
+  --success: #6FAE72;
+  --warning: #D4A03C;
+  --danger:  #D45A4A;
+  --info:    #6FA3C7;
+  --chart-1: #D4622A; --chart-2: #6FAE72; --chart-3: #D4A03C;
+  --chart-4: #6FA3C7; --chart-5: #B47AC0;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.5);
+  --shadow-lg: 0 16px 40px rgba(0,0,0,.6);
   color-scheme: dark;
+}
+
+/* Light */
+[data-theme='light'] {
+  --surface-base:    #FBF7F1;        /* warm off-white */
+  --surface-raised:  #FFFFFF;
+  --surface-overlay: #F4EDE2;
+  --surface-sunken:  #EFE7D9;
+  --border-subtle:   #E8DDC9;
+  --border-strong:   #C9B89C;
+  --border-focus:    var(--signal-500);
+  --text-primary:    #1A140E;
+  --text-secondary:  #4A3F33;
+  --text-tertiary:   #7A6B58;
+  --text-inverse:    #FFFFFF;
+  --signal-50:  #FBE7D9;
+  --signal-200: #F2B58A;
+  --signal-400: #DE7A3D;
+  --signal-600: #B14F1E;
+  --signal-700: #8C3D14;
+  --success: #4F8C53;
+  --warning: #B07A1A;
+  --danger:  #B43A2C;
+  --info:    #2E6E96;
+  --chart-1: #B14F1E; --chart-2: #4F8C53; --chart-3: #B07A1A;
+  --chart-4: #2E6E96; --chart-5: #8E5BA3;
+  --shadow-sm: 0 1px 2px rgba(60,40,20,.08);
+  --shadow-md: 0 4px 12px rgba(60,40,20,.10);
+  --shadow-lg: 0 16px 40px rgba(60,40,20,.14);
+  color-scheme: light;
 }
 
 html, body {
@@ -1734,6 +1785,15 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 ```
+
+### 15.1a Theme runtime
+
+- `apps/web/src/lib/theme.ts` exposes `useTheme() → {theme, setTheme}` with values `light|dark|system`.
+- On boot, an inline `<script>` in `index.html` reads `localStorage.theme` (or `system`) and sets `data-theme` before paint to avoid FOUC.
+- A pre-render server hint via cookie `il_theme` allows SSR-aware static HTML on the marketing site to ship the right theme on first paint.
+- Settings → Workspace → Appearance toggles (`light | dark | follow system`); changes persist to `users.ui_preferences.theme` via `PATCH /auth/me/preferences` and to `localStorage`.
+- `prefers-color-scheme` media listener applies `system` preference live.
+- Reports always render on white paper (`@media print` forces light tokens) regardless of UI theme.
 
 ### 15.2 Token migration rules
 
@@ -1754,8 +1814,8 @@ When porting the prototype CSS:
 
 ### 15.4 Out of scope for Phase 1
 
-- Light theme toggle (deferred; the token system supports it via `[data-theme='light']` override block, but no UI yet).
-- User-configurable accent (Pro feature, deferred).
+- User-configurable accent colours (Pro feature, deferred).
+- Per-tenant brand themes for customer portals (Phase 11).
 
 ---
 
@@ -1778,6 +1838,1149 @@ These warrant confirmation before Phase 2 starts:
 - **Prompt run**: an invocation of an admin-designed prompt, with input keys snapshot and output keys produced.
 - **Render**: a report generation: template + content keys → HTML + PDF.
 - **Wedge**: the venture's core differentiator (a content key: `venture.wedge`).
+
+---
+
+## §16 Email infrastructure
+
+### 16.1 Provider strategy
+
+- **Primary**: Resend (modern API, good DX, react-email templates).
+- **Failover**: Postmark (high deliverability, separate IP reputation).
+- **Marketing/lifecycle** (optional, deferred): Loops or Customer.io. Same abstraction.
+- All providers behind `lib/email/index.ts` with `send(message)` returning normalised result. Provider chosen per-request by health (see §16.4).
+
+### 16.2 Domain & deliverability
+
+- Sending domains:
+  - `notifications@ilinga.com` — transactional (auth, alerts, billing, reports)
+  - `team@ilinga.com` — human-from-look replies (invites, stakeholder asks)
+  - `marketing@ilinga.com` — newsletters, lifecycle (separate subdomain `mail.ilinga.com` with isolated reputation)
+- DNS records (provisioned per region):
+  - SPF: `v=spf1 include:resend.dev include:postmarkapp.com -all`
+  - DKIM: per-provider keys, both published
+  - DMARC: `v=DMARC1; p=quarantine; rua=mailto:dmarc@ilinga.com; pct=100; adkim=s; aspf=s`
+  - MTA-STS + TLS-RPT for inbound
+  - BIMI (after DMARC `p=reject`)
+- Bounce / complaint handling: webhook endpoints `/webhooks/email/{resend,postmark}` write to `email_events`; a soft-bounce retry policy and a hard-bounce suppression list (`email_suppressions`) prevent re-sends.
+- Suppression types: `bounce_hard`, `bounce_soft`, `complaint`, `unsubscribe`, `manual`. Marketing sends honour all; transactional auth/billing sends ignore `unsubscribe` (legal — but block on `bounce_hard`).
+
+### 16.3 Templates
+
+- React Email (`@react-email/components`) — JSX templates in `apps/api/src/email/templates/*.tsx`.
+- Built-in dark/light variants (mirrors §15 tokens).
+- All templates have HTML + plain-text fallback (auto-derived).
+- Catalog (initial):
+  - `auth/magic-link`, `auth/otp`, `auth/totp-recovery-codes`, `auth/new-device`, `auth/password-changed`
+  - `tenant/invite`, `tenant/seat-changed`, `tenant/owner-transfer`
+  - `billing/checkout-receipt`, `billing/subscription-renewed`, `billing/payment-failed`, `billing/dunning-1/2/3`, `billing/balance-low`, `billing/credit-pack-purchased`
+  - `cycle/closed`, `cycle/synthesis-complete`, `report/rendered`, `report/shared`
+  - `stakeholder/feedback-request`, `stakeholder/reminder`
+  - `data/export-ready`, `data/deletion-confirmation`
+  - `system/incident-update`, `system/scheduled-maintenance`
+- Each template version-tagged; `email_sends.template_version` recorded for audit.
+
+### 16.4 Provider health & failover
+
+- Health-check cron pings each provider every 60s; status stored in `email_provider_health (provider, status, last_ok_at, last_error)`.
+- Send path: choose primary; on `5xx`, network error, or `>5s` latency, retry on failover. If both fail, enqueue to `email_outbox` and retry with exponential backoff (max 6 attempts, then `dead_letter`).
+- Critical mail (auth, billing, security alerts) bypasses queue and tries both providers synchronously before erroring.
+
+### 16.5 Schema additions
+
+```sql
+email_messages
+  id UUID PK, tenant_id UUID NULL, user_id UUID NULL,
+  template STRING NOT NULL, template_version INT NOT NULL,
+  to_email STRING NOT NULL, from_email STRING NOT NULL,
+  subject STRING NOT NULL, payload_hash STRING NOT NULL,
+  provider STRING, provider_message_id STRING,
+  status STRING NOT NULL,           -- queued|sent|delivered|bounced|complained|failed
+  attempts INT, last_error STRING,
+  sent_at, delivered_at, created_at
+  index (tenant_id, created_at DESC), (provider_message_id)
+
+email_events
+  id UUID PK, message_id UUID FK, provider STRING,
+  event STRING,                     -- delivered|bounced|complained|opened|clicked|unsubscribed
+  payload JSONB, occurred_at TIMESTAMPTZ
+
+email_suppressions
+  id UUID PK, email STRING, kind STRING, reason STRING, source STRING, created_at
+  unique (email, kind)
+```
+
+### 16.6 Rate limits & abuse
+
+- Per-tenant cap: 10k transactional sends/day on Studio, 50k on Pro, 200k on Firm. 429s past cap.
+- Per-recipient: max 5 magic-link/OTP requests per hour per email — enforced before send.
+- Email change: requires verification of new address via OTP before flip; old address gets a notification with revert link (15 min).
+
+### 16.7 Privacy
+
+- Tracking pixels: off by default for transactional, opt-in per template flag. Disabled entirely for users who set `users.ui_preferences.email_tracking = false`.
+- GDPR: email payload retained 30 days, then payload column purged (metadata kept for audit).
+
+---
+
+## §17 SMS infrastructure
+
+### 17.1 Use cases
+
+- 2FA via SMS (lower priority than TOTP; offered as fallback only).
+- Critical security alerts (new-device sign-in for users who opt in).
+- Stakeholder reminders (tenants on Pro+).
+
+### 17.2 Providers
+
+- **Primary**: Twilio (broadest coverage, programmable messaging).
+- **Failover**: MessageBird (EU-based, fallback for EU residency).
+- Africa routing: dispatch via local aggregator (Clickatell or Africa's Talking) when destination MCC is in Africa region — better cost + delivery.
+
+Provider abstraction `lib/sms/index.ts` with `send(message, {regionHint})` selecting provider based on destination country prefix and tenant `region`.
+
+### 17.3 Compliance
+
+- Opt-in required (TCPA, GDPR ePrivacy, POPIA): users explicitly enable SMS in preferences with double-confirm.
+- STOP / HELP keywords handled by provider; webhooks update `sms_suppressions`.
+- Quiet hours: never send marketing SMS between 21:00–08:00 local time of destination.
+- No marketing SMS by default; only transactional unless tenant opts a stakeholder list in.
+
+### 17.4 Schema
+
+```sql
+sms_messages
+  id UUID PK, tenant_id UUID NULL, user_id UUID NULL,
+  template STRING, to_number STRING, from_number STRING,
+  body STRING, provider STRING, provider_message_id STRING,
+  status STRING, segments INT, cost_cents INT,
+  attempts INT, last_error STRING,
+  sent_at, delivered_at, created_at
+
+sms_suppressions
+  id UUID PK, phone STRING UNIQUE, reason STRING, source STRING, created_at
+```
+
+### 17.5 OTP via SMS
+
+- `POST /auth/otp/request {channel: 'sms', phone}` requires phone to be `verified=true` on the user; otherwise enrol flow first sends a verification OTP.
+- Codes 6 digits, 5 min expiry, max 3 attempts, separate from email OTP table (`user_phone_otps`).
+- Rate limit: 3 SMS OTP/hour per phone, 10/day per user, 30/day per tenant — to limit toll fraud.
+- Cost passed through? No — included in plan. Anomalies flagged at >2× monthly p95 to ops.
+
+### 17.6 Sender IDs
+
+- Alphanumeric sender ID `Ilinga` where supported (most of EU, ZA, UK).
+- Long codes (US, CA) registered through Twilio 10DLC; toll-free fallback during registration.
+
+---
+
+## §18 Notifications system
+
+A unified notification fabric: one event → fan out to in-app, email, SMS, webhook based on recipient preferences and event severity.
+
+### 18.1 Architecture
+
+```
+event emitted
+   ▼
+notification dispatcher
+   ├─ in-app (websocket/SSE + persisted in `notifications`)
+   ├─ email  (§16)
+   ├─ sms    (§17, only if severity ≥ alert AND user opted in)
+   └─ webhook (tenant subscribers, §3.12)
+```
+
+### 18.2 Schema
+
+```sql
+notification_topics            -- catalog (system-defined)
+  code STRING PK,              -- e.g. 'cycle.synthesis_complete'
+  display_name STRING,
+  default_channels JSONB,      -- e.g. ['inapp','email']
+  severity STRING,             -- info|alert|critical
+  description STRING
+
+notification_preferences
+  user_id UUID PK part,
+  topic_code STRING PK part,
+  channels JSONB,              -- override of default_channels
+  digest STRING,               -- 'instant'|'hourly'|'daily'
+
+notifications                  -- in-app inbox
+  id UUID PK, tenant_id UUID, user_id UUID,
+  topic_code STRING, severity STRING,
+  title STRING, body STRING, link STRING,
+  read_at TIMESTAMPTZ, dismissed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ
+  index (user_id, read_at, created_at DESC)
+
+notification_dispatch_log
+  id UUID PK, notification_id UUID, channel STRING,
+  ref_table STRING, ref_id UUID,    -- email_messages.id or sms_messages.id
+  status STRING, error STRING, dispatched_at
+```
+
+### 18.3 Routes
+
+| Method | Path                                  | Purpose                          |
+| ------ | ------------------------------------- | -------------------------------- |
+| GET    | `/notifications`                      | inbox (paginated)                |
+| POST   | `/notifications/:id/read`             | mark read                        |
+| POST   | `/notifications/read-all`             | mark all read                     |
+| GET    | `/notifications/preferences`          | list                             |
+| PUT    | `/notifications/preferences`          | bulk update                      |
+| GET    | `/notifications/stream`               | SSE stream of unread events       |
+
+### 18.4 Digesting
+
+- Users on `digest=hourly|daily` get a single email summarising notifications for that window. In-app remains real-time.
+- `cron/digest.ts` runs hourly/daily and emits `digest.email_sent` audit event.
+
+### 18.5 Critical-path overrides
+
+- Topics flagged `severity=critical` (security alerts, payment failures, data deletion confirmations) ignore digest and always send instantly via email + in-app.
+
+---
+
+## §19 Usage-based billing depth (extends §8)
+
+### 19.1 Subscription lifecycle states
+
+| State        | Triggered by                    | UI behaviour                                                |
+| ------------ | ------------------------------- | ----------------------------------------------------------- |
+| `trialing`   | new tenant on Studio/Pro trial   | full access, banner showing days remaining                  |
+| `active`     | invoice paid                     | normal                                                      |
+| `past_due`   | invoice failed                   | non-blocking warning + dunning emails                        |
+| `unpaid`     | dunning exhausted                | read-only mode (existing reports viewable; no new synthesis) |
+| `canceled`   | tenant cancels (effective at period end) | banner; access continues until `current_period_end`   |
+| `paused`     | admin or downgrade in flight     | similar to read-only                                         |
+
+State machine enforced server-side in `subscriptions.service.ts`; transitions audit-logged.
+
+### 19.2 Metering (usage events)
+
+Every credit-consuming operation emits a metering event to `usage_events`:
+
+```sql
+usage_events
+  id UUID PK, tenant_id UUID FK,
+  event_kind STRING,          -- prompt_run|render|resynth|byo_orchestration|n8n_job|export|api_call
+  units INT,                  -- credits charged (0 for orchestration-only)
+  ref_table STRING, ref_id UUID,
+  prompt_id UUID NULL, prompt_version INT NULL,
+  module_id UUID NULL, report_type_id UUID NULL,
+  endpoint_id UUID NULL, model_id STRING,
+  tokens_in INT, tokens_out INT,
+  occurred_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL
+  index (tenant_id, occurred_at DESC), (event_kind, occurred_at)
+```
+
+`credit_ledger` remains the financial source of truth; `usage_events` is the analytical fact table (one row per business event, joinable for §20 reports). Both written in the same transaction.
+
+### 19.3 Trials
+
+- 14-day Pro trial available once per tenant (tracked via `tenant_trials (tenant_id, plan_code, started_at, ended_at, ended_reason)`).
+- No card required; trial allowance = 200 credits.
+- 3 days before trial end: `trial.ending_soon` notification + email.
+- Conversion checkout pre-fills the chosen plan.
+
+### 19.4 Coupons & promo codes
+
+```sql
+coupons
+  id UUID PK, code STRING UNIQUE, kind STRING,    -- percent_off|amount_off|extend_trial
+  value INT, currency STRING, max_redemptions INT, redemptions INT,
+  applies_to JSONB,                                -- {plan_codes:[...], pack_codes:[...]}
+  expires_at TIMESTAMPTZ, active BOOL, dodo_coupon_id STRING,
+  created_by UUID, created_at
+
+coupon_redemptions
+  id UUID PK, coupon_id UUID, tenant_id UUID, ref_table STRING, ref_id UUID, redeemed_at
+```
+
+Checkout passes `coupon_code`; API validates → forwards `dodo_coupon_id` to Dodo Checkout. Redemption recorded on `payment.succeeded`.
+
+### 19.5 Tax
+
+- Dodo Payments calculates sales tax / VAT / GST per Dodo's configuration; we surface the line items in invoice display.
+- `tenants.vat_id` collected at checkout for B2B (reverse-charge in EU). Stored encrypted-at-rest only if classified sensitive in destination jurisdiction.
+- POPIA: ZA VAT 15% applied for ZA tenants.
+
+### 19.6 Dunning
+
+- `payment.failed` from Dodo → state `past_due`.
+- Automated dunning schedule (configurable per plan):
+  - T+0: email `billing/dunning-1`
+  - T+3d: email `billing/dunning-2` + in-app banner
+  - T+7d: email `billing/dunning-3` + SMS to billing contact (if opted in) + Slack/webhook
+  - T+14d: state `unpaid` → read-only mode
+  - T+30d: subscription canceled, downgrade to `free` at next period
+- Dunning suspended by successful retry (Dodo Smart Retries) or manual `update card`.
+
+### 19.7 Card update / retry
+
+- `GET /billing/portal` (Dodo billing portal) for self-service card updates.
+- `POST /billing/retry-payment/:invoice_id` triggers immediate retry once card updated.
+
+### 19.8 Refunds & credits adjustments
+
+- `POST /admin/tenants/:id/credits/adjust {delta, reason, note}` posts manual `credit_ledger` row (auditor visible).
+- Refunds via Dodo Payments dashboard; webhook `payment.refunded` → `credit_ledger` `delta = -original`.
+- Goodwill credits (no money movement): admin-only, audit-logged with required note.
+
+### 19.9 Plan switching
+
+- Upgrades: prorated immediately (Dodo handles), credit allowance topped to new plan's monthly amount.
+- Downgrades: take effect next period; if new seat limit < current, suspension policy in §5.2.
+- Cancellation: at period end; reactivation possible until cancellation effective.
+
+### 19.10 BYO endpoint billing
+
+Two-tier credit charging:
+- **Orchestration credits**: small fixed cost per prompt run / render regardless of where tokens are billed (covers our infra + agent overhead).
+- **Token credits**: only when using system AI endpoint. With BYO, tokens billed by tenant's provider; we charge orchestration only.
+
+`prompts.credit_cost` becomes a JSON: `{system: 8, byo: 2}`. The charger picks based on routed endpoint.
+
+### 19.11 Routes (new)
+
+| Method | Path                                       | Purpose                                |
+| ------ | ------------------------------------------ | -------------------------------------- |
+| POST   | `/billing/coupons/validate`                | check code, return discount preview     |
+| GET    | `/billing/trials/eligibility`              | can this tenant start a trial?          |
+| POST   | `/billing/trials/start`                    | start trial                              |
+| GET    | `/billing/usage`                           | period burn, projection, forecast        |
+| GET    | `/billing/invoices/:id/preview`            | upcoming invoice with proration          |
+
+---
+
+## §20 Credit usage reporting & analytics
+
+The platform must answer: *how much did each report cost this cycle? where are credits going? which prompts are expensive? which users are heavy?*
+
+### 20.1 Aggregations
+
+Materialised views (Cockroach `MATERIALIZED VIEW` + manual refresh cron, or scheduled rollup tables refreshed every 5 min):
+
+```
+mv_usage_daily        (tenant_id, day, event_kind, sum_units, count)
+mv_usage_by_prompt    (tenant_id, day, prompt_id, prompt_version, sum_units, runs, p50_latency_ms, p95)
+mv_usage_by_module    (tenant_id, day, module_id, sum_units, runs, success_rate)
+mv_usage_by_report    (tenant_id, day, report_type_id, template_id, renders, sum_units)
+mv_usage_by_user      (tenant_id, day, actor_user_id, sum_units, count)
+mv_usage_by_endpoint  (tenant_id, day, endpoint_id, sum_units, tokens_in, tokens_out, error_rate)
+```
+
+### 20.2 Tenant-facing reporting
+
+UI in `routes/_app/credits/usage/`:
+- Burn-rate chart (daily, last 30/90 days) split by event kind.
+- Top 10 prompts/modules by cost.
+- Cost per cycle (per venture, last 4 cycles).
+- Per-report cost breakdown (e.g. "GTM Playbook: 60 cr — 42 prompt runs, 1 render"). Drill-down lists each `prompt_run` with status, latency, credits.
+- Per-user usage (helps owners attribute spend across team).
+- BYO vs system endpoint split (orchestration vs token credits).
+- CSV export endpoint for finance.
+
+### 20.3 Routes
+
+| Method | Path                                            | Purpose                                  |
+| ------ | ----------------------------------------------- | ---------------------------------------- |
+| GET    | `/usage/summary?period=30d`                     | top-line burn, allowance, projection      |
+| GET    | `/usage/by-prompt?period=30d`                   | rollup                                    |
+| GET    | `/usage/by-module?period=30d`                   |                                           |
+| GET    | `/usage/by-report?period=30d`                   |                                           |
+| GET    | `/usage/by-user?period=30d`                     |                                           |
+| GET    | `/usage/by-endpoint?period=30d`                 |                                           |
+| GET    | `/usage/cycles/:cid/breakdown`                  | per-cycle cost detail                     |
+| GET    | `/usage/cycles/:cid/reports/:rid/breakdown`     | per-report cost detail (prompt-by-prompt) |
+| GET    | `/usage/export.csv?period=30d`                  | streaming CSV                             |
+
+### 20.4 Per-report config visibility
+
+Each `report_types` row exposes a `cost_estimator`:
+- For a given cycle, given current content key coverage, estimate render cost using `prompts.credit_cost` × predicted prompt runs × token-mode multipliers.
+- Surfaced in the Reports grid as "≈ 35–55 cr (BYO) / 90–140 cr (system)" before commit.
+
+### 20.5 Forecasting
+
+- Linear projection of period burn vs allowance; alert if projection > allowance.
+- "Days until allowance exhausted at current burn" surfaced on dashboard widget.
+- Notification topics: `credits.balance_low` (≤10%), `credits.projection_over_allowance`.
+
+### 20.6 Admin (platform)
+
+- `/admin/usage/global` shows aggregate spend, top tenants by burn, prompt-level performance.
+- Anomaly detection: flag tenants with 5× day-over-day burn increase for support outreach.
+
+---
+
+## §21 n8n Agent Designer (in-app)
+
+The platform exposes an in-app workflow editor so platform admins (and Pro+ tenants on advanced plans) can design, version, and deploy n8n workflows without leaving Ilinga.
+
+### 21.1 Goals
+
+- Manage the canonical workflows under `infra/n8n/workflows/` (interview-followup, module-synthesis, cross-module-reducer, report-prerender, competitor-scrape, artifact-extract) as first-class versioned objects.
+- Allow tenant-specific overrides on Pro+ plans.
+- Version, diff, dry-run, promote.
+
+### 21.2 Schema
+
+```sql
+agent_workflows
+  id UUID PK, tenant_id UUID NULL,        -- NULL = system
+  code STRING NOT NULL,                    -- 'wf-interview-followup' etc.
+  display_name STRING, description STRING,
+  status STRING,                            -- 'draft'|'staged'|'active'|'archived'
+  current_version INT, created_by UUID, created_at, updated_at
+  unique (COALESCE(tenant_id,'00000000-...'), code)
+
+agent_workflow_versions
+  id UUID PK, workflow_id UUID FK, version INT,
+  n8n_definition JSONB NOT NULL,            -- exported n8n workflow JSON
+  required_inputs JSONB, produced_outputs JSONB,
+  required_keys JSONB,                       -- content keys consumed
+  produces_keys JSONB,                       -- content keys produced
+  notes STRING,
+  promoted_at TIMESTAMPTZ, promoted_by UUID,
+  created_by UUID, created_at
+  unique (workflow_id, version)
+
+agent_workflow_runs                          -- mirrors n8n_jobs but agent-centric
+  id UUID PK, workflow_version_id UUID FK,
+  tenant_id UUID, cycle_id UUID NULL,
+  inputs JSONB, outputs JSONB,
+  n8n_execution_id STRING, status STRING,
+  started_at, completed_at,
+  error STRING
+```
+
+### 21.3 Editor UX (admin route `/admin/agents`)
+
+- **List**: workflows (system + per-tenant) with current version, last run, success rate.
+- **Editor**: embed a stripped-down React Flow / DAG view that mirrors n8n nodes; advanced users can switch to "JSON" mode and paste exported n8n JSON.
+- **Inputs panel**: declared `required_inputs` (e.g. `{cycleId, moduleCode}`) and `required_keys` (content keys); editor warns if a node references an undeclared key.
+- **Outputs panel**: declared content keys produced; renderer/synthesis pipeline uses these to wire downstream.
+- **Sandbox run**: pick a real cycle, run with `dry_run=true` against a copy of n8n that posts to a sandbox callback URL; results displayed as a side-by-side diff with current production version.
+- **Promote**: changes status from `draft` → `staged` → `active`; deactivates prior version automatically. Audit-logged.
+
+### 21.4 Deployment
+
+- `agent_workflow_versions.n8n_definition` is the source of truth.
+- On promote, API calls n8n REST API: `POST /workflows` (or `PUT /workflows/:id`), activates it, and stores the returned n8n workflow ID in `agent_workflows.n8n_workflow_id`.
+- For tenant-specific overrides: workflow is created in n8n with name suffixed `__tenant_<id>`; dispatcher routes to it for that tenant.
+
+### 21.5 Routes
+
+| Method | Path                                      | Purpose                       |
+| ------ | ----------------------------------------- | ----------------------------- |
+| GET    | `/admin/agents`                           | list workflows                 |
+| POST   | `/admin/agents`                           | create draft                  |
+| GET    | `/admin/agents/:id`                       | fetch with versions            |
+| POST   | `/admin/agents/:id/versions`              | new version (uploaded JSON)    |
+| POST   | `/admin/agents/:id/versions/:v/dry-run`   | sandbox execute               |
+| POST   | `/admin/agents/:id/versions/:v/promote`   | activate                      |
+| GET    | `/admin/agents/:id/runs`                  | run history                   |
+| POST   | `/tenants/:tid/agents`                    | tenant-side override (Pro+)    |
+
+### 21.6 Guardrails
+
+- Static analysis on uploaded JSON: reject workflows that reference unauthorised credentials, external HTTP nodes targeting non-allowlisted hosts, or `Execute Command` nodes (security).
+- Quotas: tenant overrides limited (Pro = 3 custom workflows, Firm = 10).
+- Rollback: any active workflow can be rolled back to a prior `active` version in <5s.
+
+---
+
+## §22 Export pipeline (extends §10)
+
+Reports + outputs must export across multiple formats reliably and accessibly.
+
+### 22.1 Supported formats
+
+| Format | Use case                              | Engine                                              |
+| ------ | ------------------------------------- | --------------------------------------------------- |
+| PDF    | Default deliverable                   | Playwright headless Chromium → `page.pdf()`         |
+| HTML   | Web-shareable rendered report         | Direct from Handlebars → static HTML file           |
+| DOCX   | Editable Word document                | `docx` (npm) — translate AST from Handlebars output  |
+| PPTX   | Investor decks                        | `pptxgenjs` — admin-defined slide template per report |
+| MD     | Plain text / re-import                | Server-side `turndown` from rendered HTML            |
+
+`report_renders.format` enum extended; each render produces a primary format and optionally siblings stored alongside (`report_render_artifacts`).
+
+```sql
+report_render_artifacts
+  id UUID PK, render_id UUID FK, format STRING,
+  storage_key STRING, size_bytes BIGINT, sha256 STRING, created_at
+  unique (render_id, format)
+```
+
+### 22.2 Routes
+
+| Method | Path                                                   | Purpose                  |
+| ------ | ------------------------------------------------------ | ------------------------ |
+| GET    | `/cycles/:cid/reports/:rid/download.:fmt`              | streams chosen format     |
+| POST   | `/cycles/:cid/reports/:rid/regenerate?formats=pdf,docx` | regenerate sibling formats |
+
+### 22.3 PDF specifics
+
+- A4 + Letter both supported; user/template chooses.
+- Embedded fonts (subset only, license-permissive) shipped under `apps/api/assets/fonts/`.
+- Page numbering, header/footer, ToC via Handlebars helpers.
+- Watermark: optional per-tenant or per-share-link (`{{watermark text='CONFIDENTIAL'}}`); diagonal repeating SVG with low opacity.
+- PDF/A-2 mode for archival when tenant flag set.
+- Tagged PDF (accessibility) — Playwright `tagged: true`; alt-text from `img` tags must be present (linter step in template validation).
+
+### 22.4 Signed URLs
+
+- All download endpoints 302 to S3 presigned GET (5-min TTL by default; configurable down to 60s).
+- Public share links (§10): support optional password (bcrypt hash), expiry, and per-link watermark.
+- Audit logged (`report.downloaded`, `report.shared.opened`).
+
+### 22.5 Accessibility
+
+- Linter runs against rendered HTML before PDF: heading hierarchy, alt text, table headers, contrast (axe-core).
+- Failing a hard rule blocks render; soft rules become warnings on the render result.
+
+### 22.6 Storage lifecycle
+
+- Render artifacts retained for cycle + 1 year; then moved to cold storage if tenant retains, else purged.
+- Tenant export bundles (data export job, §12) include all artifacts.
+
+---
+
+## §23 AI model registry (extends §9)
+
+A registry catalogues every model that may serve a workload — both system-managed and tenant-supplied — so routing, cost estimation, and fallbacks work uniformly.
+
+### 23.1 Schema
+
+```sql
+ai_models                                    -- catalog (system + tenant)
+  id UUID PK, tenant_id UUID NULL,           -- NULL = system catalog entry
+  provider STRING NOT NULL,                  -- openai|azure|anthropic|bedrock|vertex|ollama|openai_compat|fine_tune
+  model_id STRING NOT NULL,                  -- provider-specific id
+  display_name STRING NOT NULL,
+  family STRING,                             -- gpt-4|claude|llama|mistral|...
+  capabilities JSONB,                        -- {text:true, json_mode:true, vision:true, embeddings:false, ...}
+  context_window INT, max_output_tokens INT,
+  cost_per_1k_in_cents NUMERIC, cost_per_1k_out_cents NUMERIC,  -- system tier; tenant BYO can be null
+  status STRING,                             -- 'active'|'deprecated'|'preview'
+  notes STRING, created_at, updated_at
+  unique (COALESCE(tenant_id,'00000000-...'), provider, model_id)
+
+ai_model_aliases                              -- routing aliases (e.g. 'flagship' → openai/gpt-4o)
+  alias STRING PK part, tenant_id UUID PK part,
+  model_id UUID FK
+```
+
+`tenant_ai_endpoints` now FKs to `ai_models.id` instead of free-text `model_id`. Tenants pick from "supported models" dropdown that combines system catalog + their own entries.
+
+### 23.2 Custom models
+
+- Fine-tunes: tenants register their fine-tuned model under their endpoint (`provider='fine_tune'` + base `family`); we treat as a regular routable model.
+- Self-hosted via Ollama: endpoint URL points to internal Ollama; capabilities/context inferred from model id and editable.
+- OpenAI-compat (groq, deepinfra, together, anyscale, lambda, etc.): generic adapter; tenant supplies endpoint URL + key + model id.
+
+### 23.3 Embeddings & retrieval
+
+A separate workload `embeddings` was already in routing (§9). Catalogue specific embedding models:
+- OpenAI `text-embedding-3-large` / `-small`
+- Cohere `embed-multilingual-v3`
+- Local: `bge-m3` via Ollama
+
+Vector store: pgvector extension on a dedicated `vectors` cluster (Cockroach lacks pgvector — provision Postgres with pgvector for this). Tables:
+
+```sql
+artifact_embeddings
+  id UUID PK, tenant_id UUID, cycle_id UUID, artifact_id UUID,
+  chunk_index INT, chunk_text STRING, embedding VECTOR(1024),
+  model_id UUID FK, created_at
+
+answer_embeddings
+  id UUID PK, tenant_id UUID, cycle_id UUID, answer_id UUID,
+  embedding VECTOR(1024), model_id UUID FK
+```
+
+Used by extraction (§6), n8n synthesis prompts ("similar prior answers"), and stakeholder feedback dedup.
+
+### 23.4 Routing extensions
+
+- Per-workload routing now maps to a model alias (e.g. `report_render → flagship`, `interview_followup → fast`). Aliases resolve to actual `ai_models` per tenant policy.
+- Cost-aware routing (Phase 14): if projected cost > tenant budget for the cycle, fallback to cheaper alias.
+
+### 23.5 Routes
+
+| Method | Path                                | Purpose                              |
+| ------ | ----------------------------------- | ------------------------------------ |
+| GET    | `/ai-models`                        | list (system + tenant)                |
+| POST   | `/ai-models`                        | tenant adds a custom model            |
+| PATCH  | `/ai-models/:id`                    |                                      |
+| DELETE | `/ai-models/:id`                    |                                      |
+| GET    | `/ai-models/aliases`                | tenant alias map                      |
+| PUT    | `/ai-models/aliases`                | bulk update                           |
+| GET    | `/admin/ai-models`                  | manage system catalog                  |
+
+### 23.6 Migration mapping (existing → registry)
+
+`tenant_ai_endpoints.model_id` → on migration, upsert into `ai_models` (tenant scope) and replace with FK. Existing prototype values like `gpt-4o-2024-11-20` and `claude-sonnet-4` map to system catalog entries; unmapped values fall to tenant scope automatically.
+
+---
+
+## §24 Observability
+
+### 24.1 Logs
+
+- API + workers use Pino, structured JSON, with `request_id`, `tenant_id`, `user_id`, `route`, `latency_ms`, `status_code` fields.
+- Sensitive fields redacted via Pino `redact` config.
+- Shipped to a managed log store (Better Stack / Loki / Datadog — env-selectable; default Better Stack for cost).
+- Retention 30 days hot, 365 days cold.
+
+### 24.2 Metrics
+
+- Prometheus exposition at `/internal/metrics` (bound to localhost only; scraped by node-exporter sidecar).
+- Counters/histograms:
+  - HTTP: `http_requests_total{route,method,status}`, `http_request_duration_seconds{route,method}`.
+  - Auth: `auth_signin_total{method,status}`, `auth_failed_login_total`.
+  - Synthesis: `prompt_runs_total{prompt_code,status}`, `prompt_run_duration_seconds`, `prompt_run_tokens_total{direction,model}`.
+  - Render: `report_render_duration_seconds{report_type}`, `report_render_failures_total`.
+  - Credits: `credits_charged_total{reason}`, `credits_balance_gauge` per tenant.
+  - Billing: `dodo_webhook_total{event}`, `dunning_state_total`.
+  - Email/SMS: `email_send_total{provider,status}`, `sms_send_total{provider,status}`.
+- Dashboards (Grafana JSON committed to `infra/grafana/`): Auth Health, Synthesis Throughput, Render Latency, Billing Funnel, Email Deliverability, Tenant Top-Burn.
+
+### 24.3 Traces
+
+- OpenTelemetry SDK; OTLP export to Tempo / Honeycomb / Datadog.
+- Trace IDs propagated via `traceparent` header (W3C); attached to log lines.
+- Spans on: HTTP handlers, DB queries (Drizzle instrumentation), AI provider calls, n8n dispatches, Playwright renders.
+
+### 24.4 Errors
+
+- Sentry (`@sentry/node`, `@sentry/react`) with environment + release tags.
+- Source maps uploaded on web build.
+- PII scrubbing rules (email, IP) configured.
+- Error budget: synthesis pipeline 99.5% / month → alerts when burn exceeds 2× rate.
+
+### 24.5 Uptime monitoring
+
+- Synthetic probes from 3 regions every 60s on:
+  - `https://app.ilinga.com/healthz` (HTTP 200)
+  - `https://api.ilinga.com/healthz` (HTTP 200, returns DB + S3 + Redis OK)
+  - `https://api.ilinga.com/v1/healthz/n8n` (internal OK ping)
+- Cockroach Cloud + Dodo Payments reachability via deep checks every 5 min.
+- Failures > 2 consecutive → PagerDuty/Opsgenie page; status page (§29) auto-incidents after 3 consecutive.
+
+### 24.6 SLOs
+
+| Service              | Target    | Window  |
+| -------------------- | --------- | ------- |
+| API HTTP success     | 99.9%     | 30d     |
+| Auth sign-in p95     | < 500ms   | 30d     |
+| Synthesis prompt run p95 | < 8s   | 30d     |
+| Report render p95    | < 30s     | 30d     |
+| Email delivery       | 99.5%     | 30d     |
+| Webhook delivery     | 99% within 5 min | 30d |
+
+---
+
+## §25 Search & global command palette
+
+### 25.1 Backend
+
+- Phase 1: Cockroach trigram (`pg_trgm` is not available in CRDB; use `STRING` indexes + `LIKE`/`ILIKE` with computed lower-cased columns and `WHERE col LIKE '%q%'` over scoped result sets).
+- Phase 2 (when scale demands): Meilisearch (managed) syncing relevant indices via outbox; behind feature flag.
+
+### 25.2 Indexed entities
+
+- Ventures (name, brief summary)
+- Cycles (cycle number, status)
+- Modules / module outputs (narrative excerpt)
+- Reports (display name, report type)
+- Content keys (code, value text)
+- Audit log (action, actor email)
+
+All scoped to `request.tenant`.
+
+### 25.3 Routes
+
+| Method | Path                                | Purpose                                |
+| ------ | ----------------------------------- | -------------------------------------- |
+| GET    | `/search?q=...&types=...`           | global search                          |
+| GET    | `/search/recent`                    | recent results for the user             |
+
+### 25.4 Command palette (web)
+
+- `⌘K` / `Ctrl+K` opens palette across the app shell (matches prototype's "Search modules, reports… ⌘K" affordance).
+- Supports:
+  - Search (calls `/search`)
+  - Navigation actions ("Go to Ventures", "Open Settings → AI endpoints")
+  - Recent items
+  - Quick actions ("Create venture", "Render report", "Top up credits")
+- Implementation: `cmdk` (Vercel) component bound to a router-aware action registry. Keyboard-only operable; ARIA `role=combobox`/`listbox` correct.
+
+---
+
+## §26 Backup & disaster recovery
+
+### 26.1 Database
+
+- Cockroach Cloud automatic backups: full daily, incremental hourly, retained 30 days.
+- Manual backups before risky migrations: `BACKUP DATABASE ilinga TO 's3://ilinga-backups/<region>/<timestamp>' AS OF SYSTEM TIME ...`.
+- Cross-region replication for `tenants.region` HA.
+- Restore drill: monthly automated restore into a staging cluster + sanity test suite (`infra/scripts/restore-drill.sh`); evidence captured in `infra/evidence/`.
+
+### 26.2 Object storage
+
+- S3 versioning enabled on `IL_S3_BUCKET`.
+- Object lock (compliance mode) on `audit_log` exports and SOC 2 evidence prefixes.
+- Lifecycle: artifacts purged on retention; reports archived to cold storage after 1 year if tenant opts.
+
+### 26.3 Configuration & secrets
+
+- Env files versioned in private ops repo (encrypted with `sops` + age keys).
+- KEK rotation plan annual; rotation playbook in `docs/RUNBOOK.md`.
+
+### 26.4 RTO / RPO targets
+
+| Tier             | RTO    | RPO    |
+| ---------------- | ------ | ------ |
+| API + Web        | 1 hour | 0 (stateless) |
+| Cockroach data   | 2 hours | 1 hour |
+| Object storage   | 4 hours | 1 hour |
+| n8n workflows    | 30 min | 0 (definitions in git) |
+
+### 26.5 Runbooks
+
+`docs/RUNBOOK.md` covers: VM compromise, leaked KEK, Dodo outage, AI provider outage, mass deletion mistake, ransomware, cert expiry. Each playbook includes detection, mitigation, comms.
+
+---
+
+## §27 SSO & SCIM (Enterprise plan)
+
+### 27.1 SSO
+
+- **SAML 2.0** and **OIDC** both supported.
+- Identity providers tested on day-one: Okta, Azure AD / Entra ID, Google Workspace, OneLogin, JumpCloud.
+- Configured per tenant: Settings → Team → SSO.
+
+### 27.2 Schema
+
+```sql
+tenant_idp
+  id UUID PK, tenant_id UUID FK,
+  protocol STRING,                       -- 'saml'|'oidc'
+  display_name STRING,
+  entity_id STRING,                      -- SAML
+  sso_url STRING, slo_url STRING,
+  x509_cert_pem STRING,
+  oidc_issuer STRING, oidc_client_id STRING, oidc_client_secret_ciphertext BYTES, ...
+  attribute_map JSONB,                    -- {email:'...', display_name:'...', groups:'...'}
+  enforced BOOL,                          -- if true, password+OAuth login blocked for tenant
+  group_to_role JSONB,                    -- group claim → tenant role
+  jit_provisioning BOOL,
+  created_at, updated_at
+
+tenant_idp_domains
+  tenant_idp_id UUID, domain STRING UNIQUE     -- email domain → idp
+```
+
+### 27.3 Login flow
+
+- Email lookup at sign-in: if `tenant_idp_domains` matches user's email domain and `enforced=true`, redirect to IdP regardless of method chosen.
+- After IdP callback: JIT-create user (if enabled), assign role from group mapping, attach to tenant, create session.
+
+### 27.4 SCIM 2.0
+
+- Endpoint base: `https://api.ilinga.com/scim/v2/`.
+- Endpoints: `/Users`, `/Groups` (POST/GET/PATCH/DELETE).
+- Auth: bearer token per tenant (rotatable).
+- Maps SCIM attributes to `users`, `tenant_members.role`, seat-suspension on deprovision.
+- Rate-limited; events audit-logged.
+
+### 27.5 Routes
+
+| Method | Path                                | Purpose                          |
+| ------ | ----------------------------------- | -------------------------------- |
+| GET    | `/tenants/:tid/sso`                 | current config                    |
+| POST   | `/tenants/:tid/sso/saml`            | configure SAML                    |
+| POST   | `/tenants/:tid/sso/oidc`            | configure OIDC                    |
+| POST   | `/tenants/:tid/sso/test`            | dry-run an assertion              |
+| POST   | `/tenants/:tid/sso/enforce`         | flip enforcement on               |
+| GET    | `/tenants/:tid/scim/token`          | get/rotate SCIM token              |
+| `*`    | `/scim/v2/...`                      | SCIM protocol endpoints            |
+
+---
+
+## §28 API tokens & developer platform
+
+### 28.1 Personal access tokens (PATs)
+
+For users to call the API programmatically.
+
+```sql
+api_tokens
+  id UUID PK, user_id UUID FK,
+  name STRING, prefix STRING,             -- e.g. 'ila_live_'
+  hash STRING UNIQUE,                      -- sha256 of full token
+  scopes JSONB,                            -- list of permitted scopes
+  tenant_id UUID NULL,                     -- if tenant-scoped
+  expires_at TIMESTAMPTZ NULL,
+  last_used_at TIMESTAMPTZ, created_at, revoked_at
+```
+
+- Token format: `ila_live_<32 base32 chars>` (or `ila_test_` for sandbox).
+- Shown once at creation; never retrievable again.
+- Scopes: `read:ventures`, `write:ventures`, `read:reports`, `render:reports`, `read:credits`, `webhook:manage`, `admin:*` (platform admins only).
+
+### 28.2 Service accounts
+
+Tenant-scoped non-human accounts:
+
+```sql
+service_accounts
+  id UUID PK, tenant_id UUID FK, display_name STRING, role STRING,
+  created_by UUID, created_at, deactivated_at
+```
+
+PATs can be issued for service accounts; counted against seat limit (1 SA = 1 seat) on lower plans, free on Firm.
+
+### 28.3 OpenAPI
+
+- Source of truth: zod schemas in `packages/shared-types`.
+- `zod-to-openapi` generates `apps/api/openapi.yaml` at build.
+- Served at `https://api.ilinga.com/v1/openapi.yaml`; Swagger UI at `https://api.ilinga.com/docs` (public).
+
+### 28.4 SDKs
+
+- TypeScript SDK auto-generated from OpenAPI via `openapi-typescript` and a thin runtime in `packages/sdk-js`. Published to npm as `@ilinga/sdk`.
+- Python SDK via `openapi-python-client`, published to PyPI.
+- Versioning aligned to API version.
+
+### 28.5 Routes
+
+| Method | Path                                | Purpose                        |
+| ------ | ----------------------------------- | ------------------------------ |
+| GET    | `/api-tokens`                       | list (no plaintext)             |
+| POST   | `/api-tokens`                       | create — returns token once     |
+| DELETE | `/api-tokens/:id`                   | revoke                          |
+| GET    | `/service-accounts`                 |                                |
+| POST   | `/service-accounts`                 |                                |
+| POST   | `/service-accounts/:id/tokens`      | issue PAT for SA                |
+| GET    | `/openapi.yaml`                     | spec                            |
+| GET    | `/docs`                             | Swagger UI                       |
+
+### 28.6 Rate limits per token
+
+- Per-token bucket: 600 req/min default, configurable per plan.
+- 429 with `Retry-After`. Headers `X-RateLimit-Remaining`, `X-RateLimit-Reset` on every response.
+
+---
+
+## §29 Public status page & incident comms
+
+### 29.1 Status page
+
+- Hosted at `https://status.ilinga.com`.
+- Static React page (separate small build) reading from a tiny status API:
+  - Component list: API, Web, Synthesis, n8n, Reports, Email, SMS, Payments.
+  - Current status per component: operational | degraded | partial outage | major outage.
+  - Historical incidents (last 90 days).
+- Backed by `incidents` and `incident_updates` tables; admin UI in `/admin/incidents`.
+
+### 29.2 Schema
+
+```sql
+incidents
+  id UUID PK, slug STRING UNIQUE,
+  title STRING, started_at TIMESTAMPTZ, resolved_at TIMESTAMPTZ,
+  severity STRING, components JSONB,
+  status STRING                           -- investigating|identified|monitoring|resolved
+
+incident_updates
+  id UUID PK, incident_id UUID FK,
+  status STRING, body STRING,             -- markdown
+  created_by UUID, created_at
+```
+
+### 29.3 Comms
+
+- Subscribers (email/SMS) via `status_subscriptions (email, sms_phone, scope, verified_at)`.
+- On new incident or update: dispatch via §18 notifications fabric (separate "platform announcements" topic).
+- Tenants can subscribe their team automatically (Settings → Team → Auto-subscribe to incidents).
+
+### 29.4 Postmortems
+
+- Resolved incidents auto-prompt admins for a postmortem markdown; published at `/incidents/:slug` after review.
+- SOC 2 evidence: postmortem within 7 days for severity ≥ major.
+
+---
+
+## §30 Internationalisation & accessibility
+
+### 30.1 i18n
+
+- Library: `i18next` + `react-i18next`.
+- Source language: en. Translations in `apps/web/locales/<lang>/<namespace>.json`.
+- Namespaces: `common`, `auth`, `dashboard`, `interview`, `synthesis`, `reports`, `settings`, `legal`.
+- Initial languages: en, fr, es, pt, de, af, zu (POPIA helpful). Marketing site adds nl, sv as demand grows.
+- Date/number/currency: `Intl.*` APIs; user/tenant locale + timezone respected (`users.locale`, `tenants.timezone`).
+- RTL: not in initial scope; CSS uses logical properties (`margin-inline-start`) anyway for future-proofing.
+- Translation workflow: Crowdin / Lokalise sync via CI; PR opened on new strings.
+- Server messages (validation, errors): translated by the API using `Accept-Language`; API includes a `code` for client-side translation as fallback.
+
+### 30.2 Accessibility (WCAG 2.2 AA)
+
+- Component library passes `axe-core` rules in test suite (Vitest + Playwright).
+- Keyboard-only navigation tested for every page (focus visible, no traps, skip-to-content).
+- Screen-reader: aria roles correct on app shell, tab panels, dialogs, the interview question, the synthesis pipeline graph, the reports grid.
+- Colour contrast: 7:1 body / 4.5:1 secondary in both light + dark; checked in CI via Playwright screenshots + `axe`.
+- Reduced motion: `@media (prefers-reduced-motion)` disables animation-heavy transitions; the pipeline graph swaps animated edges for static.
+- Captions/transcripts: not applicable (no audio/video) at v1.
+- Alt text required on tenant-uploaded images (template lint, §22).
+
+### 30.3 a11y on PDFs
+
+- Tagged PDFs (§22.3); language tag set; reading order matches DOM order; tables have proper `<th>` and scope.
+- Test corpus: Adobe Acrobat Pro accessibility checker run in CI on a sample render per report type.
+
+---
+
+## §31 Anti-abuse hardening
+
+### 31.1 Bot defence
+
+- hCaptcha invisible challenge on signup, magic-link request, OTP request, password reset, contact forms.
+- Cloudflare Turnstile fallback (configurable).
+- Risk score from IP reputation list (AbuseIPDB / Spur) + `Sec-CH-UA` headers; high-risk requests force visible challenge.
+
+### 31.2 Account takeover defence
+
+- New-device sign-in detection: device fingerprint via `il_device` cookie; unknown device → email + SMS (if enabled) alert with one-click "this wasn't me" → force sign-out everywhere + password reset.
+- Impossible-travel: sign-in from country B within 30 min of country A → force step-up + alert.
+- Password breach check on set/change via HIBP k-anonymity API.
+- Auto-lock after 10 failed attempts in 15 min (already in §4.7).
+- Step-up auth required for: change email/password, disable MFA, view recovery codes, export data, delete cycle/tenant, rotate AI endpoint keys, configure SSO.
+
+### 31.3 Toll-fraud / OTP-pumping
+
+- SMS OTP gated by IP-level limits + per-phone limits + global tenant cap (already in §17.5).
+- Anomaly detector: if a single tenant generates >100 SMS OTPs to never-seen numbers in <1h → auto-pause SMS for that tenant + alert ops.
+- High-cost destinations (premium-rate prefixes, satellite) blocked by default.
+
+### 31.4 Webhook abuse
+
+- Outbound webhooks: SSRF protection — destination URLs resolved server-side; private/loopback ranges blocked unless tenant flag `allow_internal_webhooks` set + admin approved.
+- Max payload 256kb, max attempts 8 with exponential backoff, dead-letter after.
+
+### 31.5 Render abuse
+
+- Hard cap per tenant: 50 renders/hour Studio, 200/hour Pro, 1000/hour Firm.
+- Force `?force=true` rate-limited to 10/hour to prevent credit-burn cycles.
+
+### 31.6 Sandbox isolation
+
+- Handlebars rendering (§10.2), uploaded n8n JSON (§21.6), tenant-supplied embedding endpoints — all isolated per request, no shared state.
+
+### 31.7 Secrets handling
+
+- API keys, webhook secrets, SCIM tokens shown to user once at creation. Never logged.
+- Audit trail captures only token id + last 4 chars of public prefix.
+- Compromise response: rotate via runbook within 30 min of report; affected tenants notified in 4 hours.
+
+### 31.8 Web security headers (recap of Caddy + app)
+
+- HSTS `max-age=63072000; includeSubDomains; preload`.
+- CSP strict (no inline scripts; nonces for any required inline).
+- COOP `same-origin`, COEP `require-corp` on app subdomain.
+- Permissions-Policy disabling unused features (camera, microphone, geolocation).
+- `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`.
+
+### 31.9 Secrets in code & supply chain
+
+- `git-secrets` pre-commit hook + GitHub `push protection` enabled.
+- Dependency scanning: `pnpm audit` in CI, Renovate for upgrades, Snyk monitoring.
+- Container/host scanning: Trivy scan on the VM image weekly.
+- SBOM generated (`@cyclonedx/cyclonedx-npm`) and uploaded to compliance vault.
+
+### 31.10 Pen-testing & bug bounty
+
+- Annual external pentest (required for SOC 2 Type II).
+- Public vulnerability disclosure policy at `/.well-known/security.txt` and `/legal/security`.
+- Private bug bounty (HackerOne / Intigriti) once GA stable.
+
+---
+
+## §32 End-to-end completeness checklist
+
+The system is "done" when every item below is green. Use this as the QA gate
+before opening to GA.
+
+### 32.1 Auth & access
+
+- [ ] Sign-up via email + password, magic link, email OTP, Google OAuth
+- [ ] Email verification required before tenant create
+- [ ] TOTP 2FA setup, recovery codes, recovery code use, disable (with step-up)
+- [ ] SMS 2FA fallback (opted-in)
+- [ ] Magic link, OTP, password reset all rate-limited and abuse-tested
+- [ ] Session list, revocation, logout-everywhere
+- [ ] Trusted-device cookie + new-device alert
+- [ ] CSRF (double-submit) on all mutating routes
+- [ ] SSO (SAML + OIDC) tested with Okta, Azure AD, Google Workspace
+- [ ] SCIM provisioning + deprovisioning tested
+- [ ] Step-up auth on sensitive flows
+- [ ] HIBP password breach check on set/change
+- [ ] Impossible-travel detection alerts
+
+### 32.2 Multi-tenancy
+
+- [ ] Drizzle tenant-scope middleware blocks cross-tenant access (negative test)
+- [ ] Plan seat limits enforced on invite + downgrade
+- [ ] Tenant DEK encrypts AI keys, webhook secrets; rotation tested
+- [ ] Customer-portal wildcard (`*.portal.ilinga.com`) and custom-domain on-demand TLS
+- [ ] Region routing per tenant (`eu|us|za`)
+
+### 32.3 Ventures, interview, synthesis
+
+- [ ] Create venture with brief, geos, industry (AI-detected fallback)
+- [ ] Upload artifacts (PDF, deck, doc, image), text extraction kicks off
+- [ ] Add competitor URLs, scrape kicks off
+- [ ] Interview: progress map, hints, agent panel, follow-ups, save draft, skip
+- [ ] Synthesis pipeline runs end-to-end, content keys resolve, conflicts resolved by reducer
+- [ ] Re-synthesis charges credits and supersedes prior key versions
+- [ ] Stakeholder feedback loop: invite, respond via magic link, fold into keys
+
+### 32.4 Reports
+
+- [ ] Free reports render at 0 cr; pro/premium charge correct amount
+- [ ] Re-render same template/version free
+- [ ] Force re-render charges full price
+- [ ] PDF, HTML, DOCX, PPTX, MD outputs correct
+- [ ] Watermark renders on share links
+- [ ] Tagged PDF passes Acrobat accessibility checker
+- [ ] Share links: time-limited, optional password, audit logged
+
+### 32.5 Templates
+
+- [ ] System Handlebars templates ship for each report type
+- [ ] Tenant uploads custom template; sandbox blocks malicious helpers
+- [ ] Preview against sample cycle works
+- [ ] Template versioning preserves prior renders
+
+### 32.6 Credits & billing
+
+- [ ] Subscription checkout (Free, Studio, Pro, Firm) via Dodo
+- [ ] Top-up packs purchase via Dodo
+- [ ] Webhook handlers idempotent (duplicate `event.id` does not double-credit)
+- [ ] Monthly allowance auto-credited on `subscription.renewed`
+- [ ] Trial start/eligibility/end transitions
+- [ ] Coupons validate + apply at checkout
+- [ ] Tax (VAT/GST/sales) applied via Dodo, shown on invoices
+- [ ] Dunning sequence runs on `payment.failed`; read-only mode at T+14d
+- [ ] BYO endpoint billing charges only orchestration credits
+- [ ] Plan upgrade prorates; downgrade defers; cancellation effective at period end
+- [ ] Credit ledger balances reconcile end-of-day
+
+### 32.7 Usage reporting
+
+- [ ] Burn-rate chart, top prompts/modules/reports/users
+- [ ] Per-cycle and per-report cost breakdowns
+- [ ] CSV export
+- [ ] Forecasts + low-balance and over-projection notifications
+- [ ] BYO vs system endpoint split visible
+
+### 32.8 AI endpoints + models
+
+- [ ] BYO endpoints (OpenAI, Azure, Anthropic, Bedrock, Vertex, Ollama, OpenAI-compat) tested
+- [ ] Test connection works, validates model id
+- [ ] Routing per workload + fallback to system on error
+- [ ] Model registry surfaces system catalog + tenant additions
+- [ ] Embeddings model routable; pgvector store populated
+
+### 32.9 n8n & agent designer
+
+- [ ] Internal-only n8n on 127.0.0.1, never exposed via Caddy
+- [ ] HMAC on inbound + outbound calls
+- [ ] All canonical workflows imported and active
+- [ ] Job queue + watchdog reconciles stuck executions
+- [ ] In-app agent designer: create/version/dry-run/promote/rollback
+- [ ] Workflow security guardrails reject disallowed nodes
+
+### 32.10 Notifications, email, SMS
+
+- [ ] Resend primary, Postmark failover; bounces/complaints honoured
+- [ ] SPF/DKIM/DMARC + BIMI wired
+- [ ] Twilio + MessageBird failover; STOP/HELP handled
+- [ ] Notification preferences respected; digest works; critical override works
+- [ ] Inbox + SSE stream + mark-read flows in app
+
+### 32.11 Compliance
+
+- [ ] Audit log captures every mutation, sensitive fields redacted
+- [ ] Data export job produces complete tarball within 24h SLA
+- [ ] Data deletion (user/cycle/tenant) tested with dry-run
+- [ ] Artifact retention purge runs; audit log retained 7y
+- [ ] SOC 2 evidence collector exports monthly
+- [ ] Sub-processor list maintained at `/legal/subprocessors`
+
+### 32.12 Deployment & ops
+
+- [ ] Caddy auto-TLS, on-demand for portals, security headers in place
+- [ ] PM2 cluster mode, graceful reload, health checks
+- [ ] Deploy script validates migrations dry-run before apply
+- [ ] GeoDNS routes to nearest healthy region
+- [ ] Backups: daily full, hourly incremental; restore drill passes
+- [ ] Status page reflects real component health
+
+### 32.13 Observability
+
+- [ ] Pino structured logs shipped; PII redacted
+- [ ] Prometheus metrics + Grafana dashboards live
+- [ ] OpenTelemetry traces propagate end-to-end
+- [ ] Sentry capturing front + back errors; source maps uploaded
+- [ ] Synthetic uptime probes from 3 regions
+- [ ] SLO dashboards + alert thresholds live
+
+### 32.14 UX & frontend
+
+- [ ] Light + dark themes, follow-system, no FOUC
+- [ ] Pixel-close to prototype on every screen (Dashboard, Venture, Interview, Synthesis, Outputs, Reports, Credits, Settings)
+- [ ] Command palette (`⌘K`) with search + nav + actions
+- [ ] Legal routes (`/legal/terms`, `/privacy`, `/eula`, `/cookies`, `/dpa`, `/subprocessors`)
+- [ ] Cookie banner respects DNT + per-region defaults
+- [ ] WCAG 2.2 AA in axe-core CI; keyboard-only smoke pass
+- [ ] i18n: en + at least one alt locale shipped; RTL-safe layouts
+
+### 32.15 Security
+
+- [ ] hCaptcha on auth surfaces; risk-based escalation
+- [ ] All secrets encrypted at rest with rotated DEKs/KEK
+- [ ] CSP strict, HSTS preload, COOP/COEP on app
+- [ ] SSRF protection on outbound webhooks
+- [ ] Dependency + container scans clean; SBOM published
+- [ ] External pentest passed; bounty programme listed
+- [ ] `/.well-known/security.txt` published
+
+### 32.16 Developer platform
+
+- [ ] OpenAPI + Swagger UI live
+- [ ] TS + Python SDKs published
+- [ ] PATs + service accounts with scoped permissions
+- [ ] Per-token rate limits + standard headers
+
+---
+
+## Appendix C — Out-of-scope at GA (deferred backlog)
+
+- AI co-pilot inside the editor (in-line assist while answering questions).
+- Native mobile apps (PWA only at GA).
+- Marketplace for third-party prompt packs.
+- White-labelled enterprise tenancy with full brand themes (Phase 11+).
+- BI integrations (Snowflake / BigQuery export of usage events).
+- Customer support tooling (HelpScout / Front integration); start with shared inbox + Linear.
+
 
 
 
