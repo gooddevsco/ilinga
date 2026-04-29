@@ -7,7 +7,7 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./*": "./src/*.tsx"
+    "./styles.css": "./src/styles.css"
   },
   "scripts": {
     "build": "tsc -b",
@@ -25,9 +25,11 @@
   "devDependencies": {
     "@ilinga/eslint-config": "workspace:*",
     "@ilinga/tsconfig": "workspace:*",
+    "@testing-library/react": "^16.1.0",
     "@types/react": "^19.0.1",
     "@types/react-dom": "^19.0.1",
     "eslint": "^9.16.0",
+    "jsdom": "^25.0.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "typescript": "^5.7.2",

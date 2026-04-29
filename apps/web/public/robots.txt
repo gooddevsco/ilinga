@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /ventures
+Disallow: /reports
+Disallow: /credits
+Disallow: /settings
+Disallow: /auth
+Sitemap: https://ilinga.com/sitemap.xml
