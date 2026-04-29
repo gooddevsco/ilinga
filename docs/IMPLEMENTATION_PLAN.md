@@ -970,12 +970,15 @@ Bound to `127.0.0.1` only. HMAC-signed with `N8N_CALLBACK_SECRET`.
 
 ## §4 Auth system
 
+**Scope (simplified)**: only **email magic link** and **Google OAuth**. No
+password, no TOTP, no email OTP, no SMS OTP, no SSO, no SCIM. Magic link
+doubles as the password-reset / new-device re-auth flow.
+
 ### 4.1 Cryptography
 
-- Passwords: argon2id (`memory=64MB, iterations=3, parallelism=2`).
-- TOTP secrets, AI endpoint keys, webhook secrets: AES-256-GCM with a per-tenant DEK; DEKs wrapped by the platform KEK (env `IL_KMS_KEK_HEX`, 32 bytes hex). For SOC 2, plan migration to a managed KMS (AWS KMS / GCP KMS) — abstract behind `lib/kms/index.ts` with `wrap()`, `unwrap()`, `rotate()`.
+- AI endpoint keys, webhook secrets: AES-256-GCM with a per-tenant DEK; DEKs wrapped by the platform KEK (env `IL_KMS_KEK_HEX`, 32 bytes hex). For SOC 2, plan migration to a managed KMS (AWS KMS / GCP KMS) — abstract behind `lib/kms/index.ts` with `wrap()`, `unwrap()`, `rotate()`.
 - Session token: 32 random bytes, base64url; stored only as `sha256` in `user_sessions.token_hash`.
-- Magic link / OTP / invite tokens: 32 bytes random; stored as sha256 hash; constant-time compare on verify.
+- Magic link / invite tokens: 32 bytes random; stored as sha256 hash; constant-time compare on verify.
 
 ### 4.2 Magic link flow
 
@@ -984,43 +987,42 @@ Bound to `127.0.0.1` only. HMAC-signed with `N8N_CALLBACK_SECRET`.
    - If user exists or `purpose=signup`, create `user_magic_links` row, expires 15 min.
    - Send email: `https://app.ilinga.com/auth/callback/magic?token=<raw>`.
 2. Web client posts `token` to `/auth/magic-link/verify` → server hashes, looks up, checks `consumed_at IS NULL` and `expires_at > now()`, marks consumed in same transaction, creates session, sets cookie.
-3. If `purpose=tenant_invite`, the verify step also accepts the invitation atomically (creates `tenant_members`).
+3. Purposes: `signup | signin | tenant_invite | email_change_verify | account_recovery`. `tenant_invite` accepts the invitation atomically (creates `tenant_members`). `email_change_verify` swaps `users.email` after the new address is confirmed.
 
-### 4.3 OTP flow
-
-1. `POST /auth/otp/request` generates 6-digit code, bcrypts, stores in `user_email_otps`, expires 10 min, max 5 attempts.
-2. `POST /auth/otp/verify` checks attempts, bcrypt-verifies, marks consumed, creates session.
-3. Used for step-up (e.g. before role change) and as alt sign-in.
-
-### 4.4 Password + TOTP
-
-- `password/login` returns `{mfa_required: true, mfa_token}` when TOTP enabled. Client posts `mfa_token + code` to `/auth/totp/verify` to finish.
-- Recovery codes: 10 codes, sha256 hashed, single-use, regenerable.
-- Step-up auth required for: disabling MFA, viewing recovery codes, changing email, deleting tenant, exporting data.
-
-### 4.5 Google OAuth 2.0
+### 4.3 Google OAuth 2.0
 
 - Authorization Code + PKCE.
 - `state` cookie (signed) prevents CSRF; `nonce` in id_token validated.
-- Email must be verified in id_token; otherwise prompt for OTP.
-- On callback, upsert `users` by email, link via `user_oauth_identities`. If existing user has password+TOTP, require step-up before linking.
+- Email must be verified in id_token; otherwise the user must complete a magic-link confirmation first.
+- On callback, upsert `users` by email, link via `user_oauth_identities`.
 
-### 4.6 Sessions & cookies
+### 4.4 Sessions & cookies
 
 - Cookie name `il_session`, value = raw token, `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, `Domain=.ilinga.com`.
 - Idle timeout 24h, absolute timeout 30 days. Sliding refresh on each request (`expires_at = now + 24h`, capped at absolute 30d).
-- Trusted device: `il_device` cookie (signed JWT, 30d) lets user skip MFA on subsequent sign-ins from same device fingerprint.
+- Trusted device: `il_device` cookie (signed JWT, 30d) skips the new-device alert email.
 - CSRF: separate `il_csrf` cookie (`SameSite=Strict`, not HttpOnly) + `X-Il-Csrf` header on writes. Double-submit verified server-side.
+- Re-auth modal at 23h idle preserves form state via `useFormPersist`.
 
-### 4.7 Rate limiting & abuse protection
+### 4.5 Rate limiting & abuse protection
 
-- Token bucket per (IP, route) using Redis-equivalent (use CockroachDB-backed table `rate_limit_buckets` or run a small Valkey instance via PM2). Limits in §3.1.
-- `failed_login_counters` table tracks per-user failures; after 10 fails in 15 min, lock for 15 min and email user.
-- Bot defence: hCaptcha invisible challenge on signup, magic-link request, OTP request when `risk_score > threshold` (basic IP reputation list).
+- Token bucket per (IP, route) using Valkey. Magic link 5/min/IP and 5/hour/email. OAuth 30/min/IP.
+- Bot defence: hCaptcha invisible challenge on `magic-link/request`; visible challenge if IP reputation flags risk.
 
-### 4.8 Audit
+### 4.6 New-device + impossible-travel
 
-Every auth event writes `audit_log` with `action ∈ {auth.signin, auth.signout, auth.mfa.enabled, auth.mfa.disabled, auth.password.changed, auth.session.revoked, auth.oauth.linked}` plus IP/UA.
+- New device fingerprint (no `il_device` cookie) → email alert via §16 with one-click "this wasn't me" → revokes all sessions.
+- Impossible-travel detector (§31): sign-in from country B within 30 min of country A → alert + force a fresh magic link.
+
+### 4.7 Audit
+
+Every auth event writes `audit_log` with `action ∈ {auth.signin, auth.signout, auth.session.revoked, auth.oauth.linked, auth.email.changed, auth.account.deleted}` plus IP/UA.
+
+### 4.8 Removed from earlier draft
+
+- `password.*`, `totp.*`, `otp.*` (email + SMS) modules, `mfa_required` flow, recovery codes.
+- Tables `user_mfa`, `user_email_otps`, `user_phone_otps` are not used. Drop in a future migration if persisted.
+- All step-up flows: replaced by re-issuing a magic link for sensitive actions (delete tenant, export data, change email, rotate AI endpoint key) via `purpose=step_up`.
 
 ---
 
@@ -1188,12 +1190,18 @@ n8n only consumes a subset (the synthesis-relevant ones); tenants subscribe to a
 
 Seed in `packages/db/seed/plans.ts`:
 
-| code     | display | monthly USD | monthly credits | seats |
-| -------- | ------- | ----------- | --------------- | ----- |
-| `free`   | Free    | 0           | 30              | 1     |
-| `studio` | Studio  | 49          | 500             | 3     |
-| `pro`    | Pro     | 149         | 2000            | 8     |
-| `firm`   | Firm    | 399         | 10000           | 25    |
+| code         | display    | monthly USD | monthly credits | seats   |
+| ------------ | ---------- | ----------- | --------------- | ------- |
+| `free`       | Free       | 0           | 30              | 1       |
+| `studio`     | Studio     | 49          | 500             | 3       |
+| `pro`        | Pro        | 149         | 2000            | 8       |
+| `firm`       | Firm       | 399         | 10000           | 25      |
+| `enterprise` | Enterprise | custom      | custom          | custom  |
+
+Enterprise is bespoke pricing arranged manually; record stored with
+`dodo_subscription_id=NULL` until a Dodo subscription is provisioned. SSO/SCIM
+is **not** an Enterprise feature at GA (§27 reserved). Enterprise unlocks:
+elevated rate limits, dedicated support, custom DPAs, optional dedicated VM.
 
 Top-up packs:
 
@@ -1465,24 +1473,31 @@ Implementation:
 
 ## §14 Deployment architecture
 
+**EU-only at GA.** US + ZA records remain dormant until those regions are
+provisioned (no plan changes needed at that point — just add nodes + DNS
+records).
+
 ```
-GeoDNS (latency-routed A records → nearest VM)
-  └─ Ubuntu 24.04 VM (per region: eu-west, us-east, af-south)
+DNS (single-region at GA; GeoDNS-ready for later expansion)
+  └─ Ubuntu 24.04 VM (eu-west)
        ├─ Caddy 2 (auto-TLS, on-demand for wildcard customer portals)
        │    ├─ ilinga.com           → web/dist (static, marketing)
        │    ├─ app.ilinga.com       → web/dist (SPA, fallback to /index.html)
        │    ├─ api.ilinga.com       → 127.0.0.1:3001
+       │    ├─ status.ilinga.com    → status/dist
        │    └─ *.portal.ilinga.com  → web/dist (SPA, customer-portal mode)
        │       (also accepts CNAMEs from tenant domains via on_demand_tls)
        ├─ PM2
        │    ├─ ilinga-api  (cluster, 2 instances, 127.0.0.1:3001)
-       │    ├─ ilinga-workers (fork, 1 instance — render, webhook, retention)
+       │    ├─ ilinga-workers (fork, 1 instance — render, webhook, retention, scan, embeddings)
        │    └─ n8n         (fork, 1 instance, 127.0.0.1:5678 — internal only)
-       ├─ Local Redis-compatible (Valkey, 127.0.0.1:6379) — BullMQ queues
+       ├─ Local Valkey (127.0.0.1:6379) — BullMQ queues + SSE pub/sub
        └─ NO inbound exposure for n8n or Valkey
 ```
 
-CockroachDB and S3 are external managed services; URLs in env.
+CockroachDB (with pgvector) and Cloudflare R2 are external managed services;
+URLs in env. R2 uses S3-compatible API — same `aws-sdk` v3 client with
+`endpoint=https://<account>.r2.cloudflarestorage.com` and `region=auto`.
 
 ### 14.1 Caddyfile (`infra/caddy/Caddyfile`)
 
@@ -1603,11 +1618,13 @@ IL_REGION=eu
 # Database
 IL_DB_URL=postgresql://ilinga:...@<crdb-host>:26257/ilinga?sslmode=verify-full
 
-# Object storage
-IL_S3_ENDPOINT=https://s3.eu-west-1.amazonaws.com
+# Object storage (Cloudflare R2; S3-compatible)
+IL_S3_ENDPOINT=https://<account>.r2.cloudflarestorage.com
+IL_S3_REGION=auto
 IL_S3_BUCKET=ilinga-eu
 IL_S3_ACCESS_KEY=...
 IL_S3_SECRET_KEY=...
+IL_S3_FORCE_PATH_STYLE=true
 
 # Cookies / origins
 IL_COOKIE_DOMAIN=.ilinga.com
@@ -1617,17 +1634,21 @@ IL_API_ORIGIN=https://api.ilinga.com
 # KMS / encryption
 IL_KMS_KEK_HEX=<64 hex chars>
 
-# Auth
+# Auth (magic link + Google only)
 IL_SESSION_TTL_HOURS=24
 IL_DEVICE_TRUST_DAYS=30
+IL_MAGIC_LINK_TTL_MIN=15
 GOOGLE_OAUTH_CLIENT_ID=...
 GOOGLE_OAUTH_CLIENT_SECRET=...
 GOOGLE_OAUTH_REDIRECT=https://api.ilinga.com/v1/auth/google/callback
 
-# Email
-IL_EMAIL_PROVIDER=postmark
-IL_EMAIL_API_KEY=...
+# Email — Resend primary + Postmark failover
+IL_EMAIL_PRIMARY=resend
+IL_EMAIL_FAILOVER=postmark
+RESEND_API_KEY=...
+POSTMARK_API_KEY=...
 IL_EMAIL_FROM="Ilinga <noreply@ilinga.com>"
+IL_EMAIL_REPLY_TO="team@ilinga.com"
 
 # Dodo Payments
 DODO_API_KEY=...
@@ -1961,12 +1982,11 @@ sms_suppressions
   id UUID PK, phone STRING UNIQUE, reason STRING, source STRING, created_at
 ```
 
-### 17.5 OTP via SMS
+### 17.5 Removed — SMS OTP
 
-- `POST /auth/otp/request {channel: 'sms', phone}` requires phone to be `verified=true` on the user; otherwise enrol flow first sends a verification OTP.
-- Codes 6 digits, 5 min expiry, max 3 attempts, separate from email OTP table (`user_phone_otps`).
-- Rate limit: 3 SMS OTP/hour per phone, 10/day per user, 30/day per tenant — to limit toll fraud.
-- Cost passed through? No — included in plan. Anomalies flagged at >2× monthly p95 to ops.
+SMS OTP is **not** supported (auth simplified to magic link + Google OAuth in
+§4). SMS is only used for transactional alerts (security notices opt-in,
+stakeholder reminders on Pro+).
 
 ### 17.6 Sender IDs
 
@@ -2391,7 +2411,10 @@ A separate workload `embeddings` was already in routing (§9). Catalogue specifi
 - Cohere `embed-multilingual-v3`
 - Local: `bge-m3` via Ollama
 
-Vector store: pgvector extension on a dedicated `vectors` cluster (Cockroach lacks pgvector — provision Postgres with pgvector for this). Tables:
+Vector store: **CockroachDB pgvector** (confirmed supported per
+[cockroachlabs.com/blog/vector-search-pgvector-cockroachdb](https://www.cockroachlabs.com/blog/vector-search-pgvector-cockroachdb)).
+Embeddings live in the main DB — no separate Postgres sidecar.
+`CREATE EXTENSION IF NOT EXISTS vector;` runs in the first migration. Tables:
 
 ```sql
 artifact_embeddings
@@ -2558,59 +2581,12 @@ All scoped to `request.tenant`.
 
 ---
 
-## §27 SSO & SCIM (Enterprise plan)
+## §27 Reserved (formerly SSO + SCIM)
 
-### 27.1 SSO
-
-- **SAML 2.0** and **OIDC** both supported.
-- Identity providers tested on day-one: Okta, Azure AD / Entra ID, Google Workspace, OneLogin, JumpCloud.
-- Configured per tenant: Settings → Team → SSO.
-
-### 27.2 Schema
-
-```sql
-tenant_idp
-  id UUID PK, tenant_id UUID FK,
-  protocol STRING,                       -- 'saml'|'oidc'
-  display_name STRING,
-  entity_id STRING,                      -- SAML
-  sso_url STRING, slo_url STRING,
-  x509_cert_pem STRING,
-  oidc_issuer STRING, oidc_client_id STRING, oidc_client_secret_ciphertext BYTES, ...
-  attribute_map JSONB,                    -- {email:'...', display_name:'...', groups:'...'}
-  enforced BOOL,                          -- if true, password+OAuth login blocked for tenant
-  group_to_role JSONB,                    -- group claim → tenant role
-  jit_provisioning BOOL,
-  created_at, updated_at
-
-tenant_idp_domains
-  tenant_idp_id UUID, domain STRING UNIQUE     -- email domain → idp
-```
-
-### 27.3 Login flow
-
-- Email lookup at sign-in: if `tenant_idp_domains` matches user's email domain and `enforced=true`, redirect to IdP regardless of method chosen.
-- After IdP callback: JIT-create user (if enabled), assign role from group mapping, attach to tenant, create session.
-
-### 27.4 SCIM 2.0
-
-- Endpoint base: `https://api.ilinga.com/scim/v2/`.
-- Endpoints: `/Users`, `/Groups` (POST/GET/PATCH/DELETE).
-- Auth: bearer token per tenant (rotatable).
-- Maps SCIM attributes to `users`, `tenant_members.role`, seat-suspension on deprovision.
-- Rate-limited; events audit-logged.
-
-### 27.5 Routes
-
-| Method | Path                                | Purpose                          |
-| ------ | ----------------------------------- | -------------------------------- |
-| GET    | `/tenants/:tid/sso`                 | current config                    |
-| POST   | `/tenants/:tid/sso/saml`            | configure SAML                    |
-| POST   | `/tenants/:tid/sso/oidc`            | configure OIDC                    |
-| POST   | `/tenants/:tid/sso/test`            | dry-run an assertion              |
-| POST   | `/tenants/:tid/sso/enforce`         | flip enforcement on               |
-| GET    | `/tenants/:tid/scim/token`          | get/rotate SCIM token              |
-| `*`    | `/scim/v2/...`                      | SCIM protocol endpoints            |
+SSO (SAML / OIDC) and SCIM provisioning are **out of scope at GA**. Reserved
+for a future Enterprise phase if/when signed enterprise customers require it.
+Auth at GA = magic link + Google OAuth only (§4). Tables `tenant_idp` and
+`tenant_idp_domains` are not created.
 
 ---
 
@@ -2786,7 +2762,7 @@ incident_updates
 
 ### 31.7 Secrets handling
 
-- API keys, webhook secrets, SCIM tokens shown to user once at creation. Never logged.
+- API keys, webhook secrets shown to user once at creation. Never logged.
 - Audit trail captures only token id + last 4 chars of public prefix.
 - Compromise response: rotate via runbook within 30 min of report; affected tenants notified in 4 hours.
 
@@ -2820,18 +2796,16 @@ before opening to GA.
 
 ### 32.1 Auth & access
 
-- [ ] Sign-up via email + password, magic link, email OTP, Google OAuth
-- [ ] Email verification required before tenant create
-- [ ] TOTP 2FA setup, recovery codes, recovery code use, disable (with step-up)
-- [ ] SMS 2FA fallback (opted-in)
-- [ ] Magic link, OTP, password reset all rate-limited and abuse-tested
+- [ ] Sign-up via magic link or Google OAuth
+- [ ] Magic link rate-limited and abuse-tested (CAPTCHA on risk)
+- [ ] Email change flow (verify new + revert link on old)
+- [ ] Account self-deletion
+- [ ] Tenant ownership transfer + last-owner safeguard
+- [ ] Onboarding-after-invite path differs from self-signup
 - [ ] Session list, revocation, logout-everywhere
 - [ ] Trusted-device cookie + new-device alert
+- [ ] Re-auth modal at 23h idle preserves form state
 - [ ] CSRF (double-submit) on all mutating routes
-- [ ] SSO (SAML + OIDC) tested with Okta, Azure AD, Google Workspace
-- [ ] SCIM provisioning + deprovisioning tested
-- [ ] Step-up auth on sensitive flows
-- [ ] HIBP password breach check on set/change
 - [ ] Impossible-travel detection alerts
 
 ### 32.2 Multi-tenancy
@@ -2981,6 +2955,586 @@ before opening to GA.
 - BI integrations (Snowflake / BigQuery export of usage events).
 - Customer support tooling (HelpScout / Front integration); start with shared inbox + Linear.
 
+---
+
+## §33 Live processing feedback (streaming)
+
+Users must see things move in real time while a cycle is being processed —
+synthesis pipeline progress, per-module status, model output tokens as they
+arrive, competitor scrape progress, artifact extraction progress, reducer
+verdicts, and report render progress.
+
+### 33.1 Transport
+
+Server-Sent Events (SSE). One-way server → client; works through Caddy
+without WebSocket upgrades; native `EventSource` browser API. Auto-reconnect
+with `Last-Event-ID` to resume from last seen event id. Per-stream in-memory
+ring buffer (last 200 events per cycle) so reconnects don't lose events.
+
+### 33.2 Streams
+
+| Path                                              | Events                                                  |
+| ------------------------------------------------- | ------------------------------------------------------- |
+| `GET /cycles/:cid/events`                          | `stage.started`, `stage.complete`, `cluster.complete`, `cycle.error` |
+| `GET /cycles/:cid/modules/:mid/events`             | `module.queued|running|complete|failed`, `prompt.token`, `prompt.complete` |
+| `GET /cycles/:cid/reports/:rid/events`             | `render.queued`, `render.html_ready`, `render.pdf_progress` (page n/N), `render.complete`, `render.failed`, `render.cancelled` |
+| `GET /cycles/:cid/artifacts/:aid/events`           | `artifact.scan.*`, `artifact.extract.progress`, `artifact.extract.complete` |
+| `GET /cycles/:cid/competitors/:coid/events`        | `competitor.scrape.*`                                    |
+| `GET /cycles/:cid/presence`                        | `presence.joined`, `presence.left`, `presence.location` |
+| `GET /notifications/stream` (existing §18)         | cross-cycle, user-scoped notifications                    |
+
+Event format:
+```
+id: <ulid>
+event: prompt.token
+data: {"moduleId":"...","runId":"...","delta":"the leading…"}
+```
+
+### 33.3 Backend
+
+- `apps/api/src/lib/sse/{hub,server}.ts` — in-process pub/sub keyed by `(tenantId, cycleId, [moduleId|reportId|...])`.
+- PM2 cluster has 2 API workers, so events from worker A must reach SSE clients on worker B → **Valkey pub/sub** as the backplane (`il-sse:<key>` channel).
+- `lib/sse/server.ts` writes the SSE response, registers the connection on the hub, replays buffered events from `Last-Event-ID`, tears down on client disconnect.
+- Auth: same session cookie + tenant header; 5-min idle keepalive (`event: keepalive`).
+- Backpressure: per-connection buffer 1MB; drop with `event: stream.dropped` if exceeded so the client knows to refetch a snapshot.
+
+### 33.4 Producers
+
+- **AI provider streaming**: every provider in `lib/ai/providers/*.ts` exposes `stream(req)` returning an async iterator of token deltas. The prompt runner publishes `prompt.token` events as deltas arrive, then `prompt.complete`.
+- **n8n callbacks**: workflow nodes post progress via the existing callback endpoints; the API translates each into a hub publish. The agent designer (§21) lets admins add explicit "Emit progress" nodes that POST to `/n8n/callbacks/progress`.
+- **Render worker**: emits per-stage events while Playwright runs; for PDF, reports `page n of N` from the headless browser's page-rendered hooks.
+- **Artifact + competitor workers**: pct-progress and stage events.
+
+### 33.5 Cancellation
+
+| Method | Path                                              | Effect                          |
+| ------ | ------------------------------------------------- | ------------------------------- |
+| POST   | `/cycles/:cid/synthesis/cancel`                    | sets pipeline + in-flight prompt runs to `cancelled`; AbortController kills provider streams; refunds unused credits; emits `stream.cancelled` |
+| POST   | `/cycles/:cid/synthesis/modules/:mid/cancel`       | scope to one module             |
+| POST   | `/cycles/:cid/reports/:rid/cancel`                 | best-effort kill of Playwright context; refund credits if no PDF emitted yet |
+
+### 33.6 Frontend
+
+- `apps/web/src/lib/streaming/useEventStream.ts` — typed React hook wrapping `EventSource`, auto-reconnect, exponential backoff (250ms → 4s).
+- `features/synthesis/agent-stream.tsx` — live timestamped log panel (matches prototype).
+- `features/synthesis/pipeline-graph.tsx` — stage cards transition `queued → running → done`; running stages animate.
+- `features/synthesis/module-output.tsx` — typewriter token stream into narrative pane; switches to "saved" when `prompt.complete` arrives.
+- `features/reports/render-progress.tsx` — progress bar from `render.pdf_progress`; download buttons enable on `render.complete`.
+- `aria-live="polite"` region announces stage transitions for screen readers.
+- Pause-on-`prefers-reduced-motion`: typewriter effect collapses to single insertion.
+
+### 33.7 Reconnection + fallback
+
+If SSE fails 3× in a row, hook falls back to polling (`GET .../status` every 2s) and surfaces a "live updates paused" indicator. Once a successful event arrives the indicator clears.
+
+### 33.8 Tests
+
+- `sse/hub.test.ts` (publish → all subscribers in order; ring buffer truncation; backpressure drop emits sentinel)
+- `useEventStream.test.ts` (reconnect path with `Last-Event-ID` header; type-narrowing on event types)
+- Integration: 3 mocked streaming prompts → all token deltas reach connected supertest client via SSE in correct order
+- Cancel mid-stream verifies refund + `stream.cancelled` emitted
+- Reconnect resumes from last event id without dupes
+- E2E (Playwright): start synthesis, watch agent-stream populate live; kill API worker mid-run, observe reconnect resumes
+- Load: 200 concurrent SSE clients on one cycle; p95 event-to-frontend latency <500ms
+
+---
+
+## §34 UX gap closure (functionality + polish)
+
+These are mandatory for GA. Each item lists its owning build phase (see §37).
+
+### 34.1 Functionality-blocking
+
+| # | Item | Phase |
+| - | ---- | ----- |
+| 1 | Stakeholder-side flow at `/s/:token` (no auth, scoped to invited questions/reports; submit; reminder cadence; opt-out; stakeholder may upload an artifact + leave free-text feedback) | 6, 11 |
+| 2 | Cycle close + cancel running synthesis / render (confirmation modal listing frozen artifacts; cancel aborts in-flight provider streams + refunds) | 7, 8 |
+| 3 | Failed-action UX: per-failed `prompt_run` / `report_render` / scrape banner with reason + Retry + Contact support | 7, 8 |
+| 4 | Concurrency: optimistic-lock answers via `If-Match: <answer.version>`; 412 on conflict with merge UI; live presence dots + "last edited by" via SSE | 6, 8 |
+| 5 | Soft-delete + trash + 30-day restore for ventures and cycles | 5, 12 |
+| 6 | File preview + ClamAV virus scan (`workers/artifact-scan.ts`) before extraction; quarantine on hit | 5 |
+| 7 | Email change flow (verify new email via magic link; old gets 15-min revert link) | 3 |
+| 8 | Account self-deletion separate from tenant deletion | 12 |
+| 9 | Tenant ownership transfer with confirmation + new-owner accept | 5 |
+| 10 | Last-owner safeguard (cannot remove the only owner) | 5 |
+| 11 | Onboarding-after-invite path (skip "create workspace" step) | 5 |
+| 12 | Tenant deletion grace + restore window (7d soft-delete before hard-delete) | 12 |
+| 13 | Auto top-up: threshold + pack + monthly cap; charges via Dodo when `credits.balance_low` | 9 |
+| 14 | Invoice PDF download with company name + VAT ID; receipts auto-emailed on payment | 9 |
+| 15 | Plan limits visualisation component (seats used, credits used) | 9 |
+| 16 | Upgrade/downgrade preview ("$99.32 today, $149/month thereafter") | 16 |
+| 17 | Coupon redemption confirmation surface | 16 |
+| 18 | Tenant impersonation by platform admin (persistent banner + double-actor audit logging) | 11 |
+| 19 | In-app bug report widget (screenshot + console + last 10 requests + request_id) | 4 |
+| 20 | Contact / support form at `/help/contact` | 4 |
+| 21 | Designed error pages: 404, 403, 500, 429, 503, offline, read-only | 4 |
+| 22 | Maintenance banner with scheduled-window awareness | 4 |
+| 23 | Inline edit of generated narrative (writes new `content_keys` version `source='manual'`) | 8 |
+| 24 | Pin / star content keys | 7 |
+| 25 | Cycle clone (new cycle on same venture, carry brief + competitors + artifacts, reset answers + outputs) | 5 |
+| 26 | Compare two cycles' reports side-by-side (diff narratives + key changes) | 8 |
+| 27 | Re-synth of closed cycle blocked → opens new cycle (explicit UX) | 7 |
+| 28 | Schedule future re-render (cron-like, weekly board snapshot) | 8 |
+| 29 | Audit-log tamper-evidence: hash chain (`prev_hash` SHA-256 of previous row) | 12 |
+| 30 | DSAR workflow UX (user request page + admin queue) | 12 |
+| 31 | Right-to-rectification flow | 12 |
+| 32 | Cookie consent versioning (record consent against policy version hash) | 4 |
+| 33 | Customer-portal mode dedicated nav (no Settings → Billing; only Venture, Interview, Reports) | 11 |
+| 34 | Custom domain onboarding: prove DNS, issue cert via on-demand TLS, branded landing | 11 |
+| 35 | Brand picker (logo + accent colour) propagating into emails | 11 |
+| 36 | Webhook secret rotation 24h grace (previous secret valid; broadcast both via `X-Webhook-Signature-Old`) | 11 |
+| 37 | Webhook delivery replay button (data exists in §3.12; explicit UI button) | 11 |
+| 38 | Per-tenant API request log (debugging surface, retained 7d) | 28-equivalent (now 24) |
+| 39 | Resume mid-onboarding (close wizard → next sign-in lands on next step) | 5 |
+
+### 34.2 UX polish (no "v2 later")
+
+| # | Item | Phase |
+| - | ---- | ----- |
+| 40 | Empty states for every list (Ventures, Cycles, Reports, Outputs, Audit, Notifications, Credits ledger, Templates, Webhooks, AI endpoints, API tokens, Stakeholders, Trash) — illustrated, single primary CTA | 4 + each owning phase |
+| 41 | Skeleton loaders for every async list/detail; suspense fallbacks; route-level loading bar | 4 |
+| 42 | Global error boundary, toast system (`components/toast.tsx`), zod error → field-level mapping | 4 |
+| 43 | Session expiry UX: 23h idle warning modal, re-auth without losing form state (`useFormPersist`) | 3, 4 |
+| 44 | Responsive layouts: tablet read-only minimum on Dashboard, Reports, Credits, Settings; sidebar drawer ≤768px | 4 |
+| 45 | In-app help: `/help` MDX docs, `?` shortcut for contextual help drawer, glossary chips on cluster/module/wedge/key/credit | 4, 22 |
+| 46 | Marketing landing + pricing page + compare-plans table + checkout-handoff | 4, 9 |
+| 47 | Comments + @-mentions on questions and rendered reports (`comments`, `comment_mentions` tables) | 6, 8 |
+| 48 | Keyboard shortcut cheatsheet (`?`); `g d / g v / g i / g r / g c / g s` navigation; `j/k` list nav | 22 |
+| 49 | Time-zone-aware rendering (user TZ on `users.timezone`, `date-fns-tz`) | 4 |
+| 50 | Print styles for app pages (clean printing of Outputs in particular) | 4 |
+| 51 | Privacy-aware product analytics: PostHog self-hosted EU, gated by cookie consent | 4 |
+| 52 | Trial countdown banner + upgrade nudge (`subscription.status='trialing'`) | 16 |
+| 53 | Read-only mode banner + every write button disabled with tooltip when `subscription.status ∈ {unpaid, paused}` | 16 |
+| 54 | Last login + recent activity widget on Dashboard | 4 |
+| 55 | Quick-start cards on Dashboard (create venture, invite teammates, add AI endpoint, top up credits — vanish when each is done) | 5 |
+| 56 | Demo / sample-data mode: new tenants get a seeded "Northwind Cargo" cycle behind a `Demo` flag; one-click reset; cannot bill credits | 5 |
+| 57 | Activity feed per cycle (`/cycles/:cid/activity`) reading from `audit_log` filtered + humanised | 6, 8 |
+| 58 | SEO basics: `<meta description>`, Open Graph, Twitter cards, `robots.txt`, `sitemap.xml`, canonical URLs | 4 |
+| 59 | Trust strip on marketing (logos, security badges, SOC 2-in-progress notice) | 4 |
+| 60 | Webhook "Send test event" button | 11 |
+| 61 | Spellcheck on prose answer fields, off on URL/code | 6 |
+
+---
+
+## §35 Frontend conventions (no-dead-UI rule + patterns)
+
+### 35.1 No dead buttons or links — hard rule
+
+No rendered button, link, menu item, tab, toggle, icon-button, or interactive
+control in any merged PR may be a no-op, a `href="#"`, an `onClick` that only
+logs, a "coming soon" stub, or a route that 404s. Every interactive element
+must either:
+
+1. Perform its action against the live API, **or**
+2. Open a real route that renders real content, **or**
+3. Be **conditionally hidden** behind a feature flag (`apps/web/src/lib/flags.ts`) when the backend isn't ready — never disabled-and-visible without a tooltip stating why.
+
+#### Enforcement
+
+- `apps/web/e2e/no-dead-ui.spec.ts` — Playwright crawl that:
+  1. Logs in as a seeded owner.
+  2. Visits every route reachable from the sidebar, topbar, and command palette.
+  3. For each route, queries every visible-and-enabled `<a>`, `<button>`, `[role="button"|"tab"|"menuitem"]`, `<select>` option.
+  4. Asserts:
+     - Anchors: `href` non-empty, not `#`, not `javascript:`; clicking resolves to a 200 route without `data-testid="not-found"`.
+     - Buttons: clicking either issues an XHR (visible to MSW spy) **or** changes URL **or** mutates a visible DOM region. None of these → fail.
+     - Tabs/menus: each panel non-empty.
+- ESLint rule `no-empty-handlers` (custom under `packages/eslint-config/`) fails on `onClick={() => {}}`, `onClick={noop}`, `href="#"`, `href="javascript:..."`.
+- Storybook (or Ladle) snapshot of each interactive component must declare its action prop; a default "noop" prop is rejected by lint.
+
+### 35.2 Standard patterns
+
+- **Empty states** (§34 #40): one `<EmptyState>` component (`components/empty-state.tsx`) with `icon`, `title`, `body`, `cta`. Every list uses it; copy is feature-specific.
+- **Skeleton loaders** (§34 #41): one `<Skeleton>` primitive + per-route `*-skeleton.tsx` matching final layout. Suspense fallbacks for route-level lazy-loaded chunks. Top-of-page progress bar (`nprogress`-style) on route transitions.
+- **Toast + error boundary** (§34 #42): `<Toaster>` provider; `useToast()` hook with `info|success|warning|error`. Errors from the API client surface a default toast unless the caller passes a field-mapper. Top-level `<ErrorBoundary>` for route trees with a "Send report" button (wired to §34 #19).
+- **Form persistence** (§34 #43): `useFormPersist(key, control)` autosaves to `sessionStorage` with debounce; restored on remount; cleared on submit success.
+- **Loading-aware buttons**: `<Button loading>` shows spinner + disables; never two clicks producing two requests.
+- **Confirmation modals** for destructive actions; require typing the resource name for permanent deletes.
+- **Action providers**: a single `actions/` registry maps action ids → handlers; sidebar/topbar/palette/keyboard all dispatch via the same registry to prevent stale buttons.
+- **Live regions**: SSE-driven panes have `aria-live="polite"`; reduced-motion swaps token typewriter for single-paint.
+- **Time formatting**: `formatDateTZ(date, user.timezone)` everywhere; never raw `toLocaleString()`.
+- **Currency**: `formatMoney(cents, currency)` everywhere; never raw `/100`.
+- **Numbers**: `formatNumber(n, { compact })` — credits, tokens, pages.
+
+### 35.3 Acceptance per phase
+
+For every frontend phase:
+- `pnpm e2e -- no-dead-ui` is green for that phase's routes.
+- Coverage for the route's container component reaches ≥80% lines, with every button's handler exercised at least once.
+- Empty states + skeletons exist for every async list shipped that phase.
+
+---
+
+## §36 Schema additions (consolidated)
+
+These tables and columns extend §2 to support §33–§35 and §34's UX items.
+
+```sql
+-- Comments + mentions on questions, modules, reports
+comments
+  id UUID PK,
+  tenant_id UUID FK,
+  cycle_id UUID,
+  target_table STRING,                  -- 'question_answers'|'modules'|'report_renders'
+  target_id UUID,
+  author_id UUID FK → users.id,
+  body STRING,                           -- markdown, max 8kb
+  created_at, updated_at, deleted_at
+  index (tenant_id, target_table, target_id, created_at)
+
+comment_mentions
+  comment_id UUID PK part,
+  mentioned_user_id UUID PK part,
+  notified_at TIMESTAMPTZ
+
+-- Live presence for collaborative awareness
+cycle_presence
+  tenant_id UUID PK part,
+  cycle_id UUID PK part,
+  user_id UUID PK part,
+  last_seen_at TIMESTAMPTZ NOT NULL,
+  location STRING                        -- 'interview/Q3.4'|'synthesis'|'reports/snapshot'
+
+-- Antivirus scan results for uploaded artifacts
+artifact_scans
+  artifact_id UUID PK,
+  status STRING NOT NULL,                -- 'queued'|'clean'|'infected'|'failed'
+  scanned_at TIMESTAMPTZ,
+  signature_db_version STRING,
+  threat_name STRING
+
+-- User preferences consolidated
+ALTER TABLE users
+  ADD COLUMN timezone STRING NOT NULL DEFAULT 'UTC',
+  ADD COLUMN ui_preferences JSONB NOT NULL DEFAULT '{}';
+  -- ui_preferences shape: { theme:'light|dark|system', email_tracking:bool,
+  --                         reduced_motion:bool, density:'comfortable|compact' }
+
+-- Audit log tamper evidence (hash chain)
+ALTER TABLE audit_log
+  ADD COLUMN prev_hash BYTES,            -- sha-256 of previous row's serialized fields
+  ADD COLUMN row_hash BYTES NOT NULL;    -- this row's hash
+
+-- Auto top-up configuration
+auto_topups
+  tenant_id UUID PK,
+  enabled BOOL NOT NULL DEFAULT false,
+  threshold_credits INT NOT NULL,        -- e.g. 50
+  pack_code STRING NOT NULL,             -- references credit_packs.code
+  monthly_cap_cents INT,                 -- safety
+  spent_this_period_cents INT DEFAULT 0,
+  period_resets_at TIMESTAMPTZ,
+  updated_at
+
+-- Optimistic locking on answers
+ALTER TABLE question_answers
+  ADD COLUMN version INT NOT NULL DEFAULT 1;
+
+-- Stakeholder uploads + free-text feedback
+ALTER TABLE stakeholder_responses
+  ADD COLUMN free_text STRING,
+  ADD COLUMN uploaded_artifact_id UUID FK → venture_artifacts.id;
+
+-- Pinned content keys
+content_key_pins
+  tenant_id UUID PK part, cycle_id UUID PK part, code STRING PK part,
+  pinned_by UUID, pinned_at TIMESTAMPTZ
+
+-- Trash / soft delete tombstones with restore deadline
+deletion_tombstones
+  id UUID PK,
+  tenant_id UUID,
+  target_table STRING,
+  target_id UUID,
+  deleted_by UUID,
+  deleted_at TIMESTAMPTZ,
+  restore_deadline TIMESTAMPTZ,           -- e.g. now + 30d for ventures, 7d for tenants
+  hard_deleted_at TIMESTAMPTZ,
+  index (tenant_id, target_table, restore_deadline)
+
+-- Impersonation sessions (platform admin → tenant user)
+impersonation_sessions
+  id UUID PK,
+  admin_user_id UUID FK → users.id,
+  impersonated_user_id UUID FK → users.id,
+  tenant_id UUID,
+  reason STRING,
+  started_at TIMESTAMPTZ, ended_at TIMESTAMPTZ,
+  ip INET, user_agent STRING
+
+-- Cookie consent versioned record
+cookie_consents
+  id UUID PK,
+  user_id UUID NULL,                     -- null for anon visitors keyed by anon_id
+  anon_id STRING NULL,
+  policy_version_hash STRING NOT NULL,
+  categories JSONB,                       -- {essential:true, analytics:false, ...}
+  ip INET, user_agent STRING, created_at
+
+-- Per-tenant API request log (debugging)
+api_request_log
+  id UUID PK,
+  tenant_id UUID, actor_user_id UUID NULL, api_token_id UUID NULL,
+  method STRING, path STRING, status INT, latency_ms INT,
+  request_id STRING, ip INET,
+  created_at
+  index (tenant_id, created_at DESC)
+  -- retain 7 days, partition by day for cheap drops
+
+-- DSAR + rectification queue
+dsar_requests
+  id UUID PK, user_id UUID, tenant_id UUID,
+  kind STRING,                            -- 'access'|'rectification'|'erasure'|'portability'|'restriction'
+  description STRING, status STRING,
+  assigned_admin_id UUID, resolution STRING,
+  created_at, resolved_at
+
+-- Maintenance windows
+maintenance_windows
+  id UUID PK, starts_at, ends_at, message STRING, severity STRING,
+  affects_components JSONB, published BOOL, created_by, created_at
+```
+
+### Schema modifications already in §2 retained
+
+`venture_cycles.deleted_at`, `ventures.deleted_at` already supported soft-delete; UI exposes them under §34 #5.
+
+### Removed tables (no longer required after auth simplification)
+
+`user_mfa`, `user_email_otps`, `user_phone_otps` — drop in a future migration.
+For Phase 2 of the build, simply do not seed/use them.
+
+### Removed tables (no longer required after dropping SSO/SCIM)
+
+`tenant_idp`, `tenant_idp_domains` — never created.
+
+---
+
+## §37 Build phases (executable plan)
+
+Sequential phases on branch `claude/ilinga-saas-platform-ffsjc`, Conventional
+Commits, push at the end of each phase. **Definition of done per phase**:
+lint + types + unit + integration + Playwright E2E + `no-dead-ui` crawl +
+axe-core a11y scan + Lighthouse perf budget all green; coverage ≥80% on lines
+touched; every shipped route has its empty/loading/error states + skeletons +
+toasts; SSE pathways have an `aria-live` region.
+
+### Phase 0 — Repo bootstrap
+
+- pnpm + turbo monorepo: `apps/{web,api,workers}`, `packages/{db,ui,sdk,eslint-config,tsconfig,emails}`.
+- Node 22 LTS, TypeScript strict.
+- ESLint flat config + Prettier; custom rule `packages/eslint-config/no-empty-handlers.ts` (forbid `onClick={() => {}}`, `href="#"`, `href="javascript:..."`).
+- Vitest, Playwright, MSW, axe-playwright, lighthouse-ci.
+- Husky + lint-staged.
+- GitHub Actions matrix: lint, typecheck, unit, integration, e2e, e2e-no-dead-ui, a11y, lighthouse.
+- `.env.example` for api/web/workers; `docker-compose.yml` for local Cockroach + Valkey + n8n.
+- README for `pnpm dev`.
+
+### Phase 1 — Database + KMS
+
+- Drizzle schema for §2 + §36 (every table including comments, presence, scans, hash-chained audit log, auto top-ups, deletion tombstones, impersonation, cookie consents, api request log, dsar, maintenance windows, content key pins).
+- `CREATE EXTENSION IF NOT EXISTS vector;` first migration.
+- `lib/kms/{kek,dek}.ts` — KEK from `IL_KMS_KEK_HEX`, AES-256-GCM wrap/unwrap, rotation tested.
+- `pnpm db:seed` — plans (incl. `enterprise`), credit packs, system AI registry, demo "Northwind Cargo" tenant + cycle, four report templates.
+- Drizzle tenant-scope guard middleware.
+- Tests: cross-tenant access denied; KMS round-trip; demo data renders.
+
+### Phase 2 — API skeleton + observability
+
+- Hono on Node 22 (Fastify also acceptable; Hono chosen for type-safety and small footprint), routes scaffolded as 501s and feature-flagged off.
+- Zod request/response schemas, request id middleware, structured pino logging, OpenTelemetry traces to local OTel collector → Grafana Tempo.
+- Error envelope per §3.3, problem-details JSON.
+- Rate limiting via Valkey token bucket.
+- `/v1/internal/healthz`, `/v1/internal/readyz`, `/v1/internal/version`.
+- BullMQ queues + workers app skeleton.
+- SSE hub (`lib/sse/{hub,server}.ts`) with Valkey pub/sub backplane (§33.3).
+- Tests: rate limit, request-id propagation, SSE multi-worker fanout.
+
+### Phase 3 — Auth (magic link + Google) + email
+
+- §4 magic-link flow (purposes: signup, signin, tenant_invite, email_change_verify, account_recovery, step_up).
+- Google OAuth Auth Code + PKCE.
+- Email change flow + revert link.
+- Account self-deletion endpoint.
+- Sessions, `il_session` + `il_csrf` cookies, idle/absolute timeouts, sliding refresh, `il_device` cookie + new-device alert.
+- Re-auth modal at 23h with `useFormPersist`.
+- Cookie consent versioning (`cookie_consents`).
+- Resend primary + Postmark failover (§16); transactional template MJML for: magic_link, invite, email_change_verify, new_device_alert, payment_receipt, low_credits.
+- Tests: enumeration-safe; no double-consume; PKCE state mismatch rejected; email failover under primary 5xx; cookie consent recorded; impossible-travel alert.
+
+### Phase 4 — Web app shell + design system
+
+- Vite + React + TypeScript + React Router; Tailwind v4 with `@theme` tokens (§15) for light + dark; system-respecting toggle.
+- `packages/ui` primitives: Button (with `loading` state), Input, Select, Textarea, Modal, Tabs, Toast, EmptyState, Skeleton, Badge, Avatar, Card, Dropdown, Command Palette, ProgressBar, ToggleGroup, Tooltip, Sheet (sidebar drawer).
+- Layouts: marketing, app, customer-portal, stakeholder, admin.
+- App shell: topbar, sidebar (with action-registry-driven nav), command palette (`g d / g v / …` shortcuts + `?` cheatsheet), keyboard nav.
+- Global error boundary with "Send report" wired to bug-report widget.
+- Designed error pages: 404, 403, 500, 429, 503, offline, read-only.
+- Maintenance banner reads `/v1/internal/maintenance`.
+- Toaster + form-persist + skeletons + route-level loading bar.
+- `/help/*` MDX docs + `/help/contact`; glossary chips.
+- `/legal/*` MDX (terms, privacy, DPA, security.txt, cookies); cookie banner.
+- SEO: meta description, OG, Twitter, robots, sitemap, canonical.
+- Marketing landing + pricing + compare-plans + trust strip + checkout-handoff.
+- Bug-report widget (screenshot via `html2canvas`, console buffer, last 10 XHRs, request_id).
+- TZ-aware formatters; print styles; PostHog (self-hosted EU) gated by consent; last-login + recent-activity widget; quick-start cards.
+- Tests: `e2e/no-dead-ui.spec.ts` for every shell route; axe a11y; LH ≥90 on app shell.
+
+### Phase 5 — Tenants, members, roles, ownership
+
+- §5 endpoints; invite via magic-link `purpose=tenant_invite`; resume-mid-onboarding.
+- Onboarding-after-invite differs from self-signup (skip "create workspace").
+- Tenant ownership transfer + accept; last-owner safeguard.
+- Soft-delete venture (`deletion_tombstones`, 30d), trash + restore page.
+- Cycle clone.
+- Demo / sample-data tenant flag (Northwind Cargo seeded; one-click reset; cannot bill credits).
+- Quick-start cards on Dashboard (Create venture, Invite teammates, Add AI endpoint, Top up).
+- File preview + ClamAV virus scan worker (`workers/artifact-scan.ts`); quarantine on hit.
+- Tests: invite accept atomic, last-owner cannot leave, restore window, demo cannot bill, scan blocks extraction on hit.
+
+### Phase 6 — Ventures, brief, artifacts, competitors, interview
+
+- Brief schema (§6); industry/geos auto-detect (system AI).
+- Artifact upload (R2 presigned PUT) → scan (Phase 5) → extraction worker (PDF, deck, doc, image OCR) → embeddings.
+- Competitor URL add → scrape worker (`workers/competitor-scrape.ts`) → text + structured fields.
+- Interview UI (matches prototype): progress map (`g d`-like nav), `agent-stream` pane, hints, follow-ups, save draft, skip.
+- Optimistic locking on answers (`If-Match: <version>` → 412 with merge UI).
+- Live presence dots + "last edited by" via SSE (`/cycles/:cid/presence`).
+- Comments + @-mentions on questions (`comments`, `comment_mentions`).
+- Spellcheck on prose; off on URL/code.
+- Stakeholder portal `/s/:token` (no auth, scoped, opt-out, reminder cadence, free-text feedback, optional artifact upload).
+- Activity feed `/cycles/:cid/activity` reading from audit log.
+- Tests: 412 on stale `If-Match`; presence broadcast across two browsers; stakeholder-token scoped to invited Qs; mention notification; spellcheck attribute.
+
+### Phase 7 — Synthesis pipeline + cancellation
+
+- §6 content keys, modules, prompt runs, reducer, conflict resolution.
+- AI provider streaming (`stream(req)` async iterator) for OpenAI / Anthropic / Mistral / Cohere / Groq / generic OpenAI-compat / Ollama.
+- SSE: `prompt.token`, `prompt.complete`, `module.*`, `cluster.complete`, `stage.*`, `cycle.error`.
+- Cancellation: `POST /cycles/:cid/synthesis/cancel`, per-module cancel; AbortController kills provider streams; refunds unused credits; emits `stream.cancelled`.
+- Failed-action banner per failed `prompt_run` (reason + retry + contact support).
+- Re-synth opens new cycle if the source cycle is closed (explicit UX).
+- Pin / star content keys.
+- Tests: 200 concurrent SSE clients; mid-stream cancel refunds; provider 429 retries with backoff; reducer conflict deterministic.
+
+### Phase 8 — Reports + render worker + cancellation
+
+- Handlebars templates (4 default: Investor Pulse, GTM Snapshot, Risk Map, Board Brief), MJML for PDF.
+- Render worker via Playwright (`workers/render.ts`) emitting `render.queued`, `render.html_ready`, `render.pdf_progress` (page n/N), `render.complete`, `render.failed`, `render.cancelled`.
+- Inline narrative edit writes new `content_keys` version `source='manual'`.
+- Compare two cycles' reports side-by-side.
+- Schedule future re-render (cron-like).
+- Cycle close + cancel running synthesis + render in single confirm (lists frozen artifacts).
+- Comments + mentions on rendered reports.
+- Failed-action banner per failed `report_render`.
+- Tests: cancel mid-PDF refunds; close-cycle freezes `cycle.frozen_at`; comparison diff stable; scheduled re-render fires within 60s window.
+
+### Phase 9 — Dodo Payments + credits + auto top-up + invoices
+
+- §8 + §19 + §36 `auto_topups`.
+- Plans seed including `enterprise`; checkout for plan + topup; webhook idempotency on `dodo_event_id`.
+- Auto top-up: threshold + pack + monthly cap; charges via Dodo when `credits.balance_low`.
+- Upgrade/downgrade preview with proration ("$99.32 today, $149/month thereafter").
+- Coupon redemption confirmation surface.
+- Invoice PDF download with company name + VAT ID; receipts auto-emailed on payment via Phase 3 templates.
+- Plan-limits visualisation (seats used, credits used).
+- Trial banner; read-only mode banner when `subscription.status ∈ {unpaid, paused}` (every write disabled with tooltip).
+- Tests: webhook replay (no double-credit); auto-topup respects monthly cap; invoice PDF byte-deterministic for same data; read-only blocks all `POST /v1/*` write paths.
+
+### Phase 10 — n8n integration + agent designer
+
+- §7 inbound (`/n8n/exec`) + callbacks (`/n8n/callbacks/*` including `progress`).
+- HMAC + replay-protection (`X-Il-Timestamp` + nonce); shared secrets in env.
+- §21 in-app agent designer: read/write workflow JSON via n8n REST, validation, sandboxed test run, credentials shim mapping tenant AI endpoints.
+- "Emit progress" node POSTs to `/n8n/callbacks/progress` → SSE.
+- Tests: HMAC tampering rejected; nonce replay rejected; sandboxed run blocked from external HTTP.
+
+### Phase 11 — Customer-portal + custom domain + brand + webhooks + impersonation
+
+- `*.portal.ilinga.com` SPA mode (nav: Venture, Interview, Reports — no Settings → Billing).
+- Custom domain onboarding: prove DNS, on-demand TLS, branded landing.
+- Brand picker (logo + accent) propagating into transactional emails.
+- Webhook delivery (§3.12) + secret rotation 24h grace (`X-Webhook-Signature-Old`); replay button; "Send test event" button.
+- Per-tenant API request log (7d retention, partition-by-day).
+- Stakeholder reminder cadence cron.
+- Platform-admin tenant impersonation: persistent banner + double-actor audit logging via `impersonation_sessions`.
+- Tests: portal cannot reach tenant settings even if URL guessed; on-demand TLS issuance flow; webhook old-secret accepted within 24h then rejected; impersonation rows present + banner shown.
+
+### Phase 12 — Compliance: audit hash chain + DSAR + tenant deletion grace + retention
+
+- Audit-log hash chain (`prev_hash`, `row_hash`); tamper detection job (`workers/audit-verify.ts`).
+- DSAR queue UX: user request page + admin queue (`dsar_requests`).
+- Right-to-rectification flow.
+- Tenant deletion: 7d soft-delete + restore window; hard-delete worker (`workers/retention.ts`).
+- Account self-deletion (separate from tenant) with grace period.
+- Data retention defaults per §12 + per-tenant overrides.
+- Tests: chain verifies on a clean DB; tampering one row fails verification; restore within 7d revives; hard-delete after 7d removes R2 + DB + backups index.
+
+### Phase 13 — Backups + DR
+
+- §26 cron-driven `pg_dump` to R2 (versioned bucket); retention 30/90/365.
+- Tested restore drill in CI weekly job.
+- Tests: restore drill produces working app on staging.
+
+### Phase 14 — Status page + maintenance + incident comms
+
+- `status.ilinga.com` static SPA (§29) consuming `/v1/status`.
+- `maintenance_windows` admin UI; banner appears app-wide during window.
+- Tests: scheduled window flips banner on/off at boundary minute.
+
+### Phase 15 — API tokens + developer platform
+
+- §28 PATs + service accounts with scoped permissions.
+- Public OpenAPI 3.1 spec, hosted at `https://api.ilinga.com/v1/openapi.json` and rendered at `/developers/docs`.
+- Per-token rate limits + standard headers (`X-RateLimit-*`).
+- API request log surface (Phase 11 data) with filters.
+- Tests: scope enforcement; rate-limit headers correct; OpenAPI matches actual route schemas (lint).
+
+### Phase 16 — Search + command palette + analytics
+
+- §25 search across ventures, cycles, reports, content keys (Postgres FTS for now; vector search via §23.3 for content keys).
+- Command palette (registered actions) — already mounted Phase 4; this phase wires search backend.
+- §20 credit usage reports + analytics dashboards (per-tenant).
+- Tests: search returns scoped results only; analytics SQL deterministic.
+
+### Phase 17 — i18n + a11y + mobile polish
+
+- §30 i18n scaffolding (en-GB at GA; copy externalised); locale-aware formatters.
+- Full a11y pass: keyboard reachability for every interactive control; focus order; visible focus rings; reduced-motion paths; aria-live for streaming.
+- Tablet read-only minimum on Dashboard, Reports, Credits, Settings; sidebar drawer ≤768px.
+- Tests: axe a11y violations = 0 across all routes; PWA installable.
+
+### Phase 18 — Anti-abuse hardening + observability completion
+
+- §31 trimmed to magic-link auth: token bucket per (IP, route), HIBP not used (no passwords), CAPTCHA on `magic-link/request` risk, abuse signals.
+- §24 OTel traces in every workflow path; Grafana dashboards for queue depth, p95 SSE latency, render queue, auto-topup, webhook delivery.
+- Tests: load test 200 concurrent SSE + 50 RPS API stays within budget; abuse-attack simulations rate-limit and CAPTCHA-challenge correctly.
+
+### Phase 19 — Pre-GA hardening
+
+- §32 completeness checklist: every box ticked.
+- Pen-test (external) findings remediated; SBOM generated; security.txt published.
+- Production env final secrets rotation; runbooks for rotate/restore/incident.
+- Soft launch: invite first 20 tenants, 7-day burn-in, monitor SLOs.
+- Cut over GA.
+
+---
+
+### §37 Acceptance criteria summary
+
+| Aspect                | Gate                                                                                  |
+| --------------------- | ------------------------------------------------------------------------------------- |
+| Lint + types          | `pnpm -r lint && pnpm -r typecheck` exit 0                                            |
+| Unit + integration    | `pnpm -r test` ≥80% lines coverage on touched packages                                 |
+| E2E                   | `pnpm e2e` passes; includes `no-dead-ui` crawl                                         |
+| a11y                  | `axe-playwright` returns 0 violations on every shipped route                            |
+| Performance           | LH ≥90 perf/a11y/best-practices on app shell + key flows; bundle budget 220kB gz initial |
+| Streaming             | p95 event-to-frontend latency <500ms under 200 concurrent SSE clients on one cycle     |
+| Empty / loading       | Every list shipped that phase has `<EmptyState>` and `<Skeleton>` paths                |
+| No dead UI            | Crawler reports zero noop / `href="#"` / 404 routes                                    |
+| Tenant isolation      | Every endpoint negative-tested across tenants; no leak                                  |
+| Audit chain           | `pnpm audit:verify` validates the entire chain                                          |
+| DR                    | Weekly restore drill green                                                              |
 
 
 
