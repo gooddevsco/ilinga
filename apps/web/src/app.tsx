@@ -12,6 +12,7 @@ import { Developers } from './pages/marketing/Developers';
 import { SignIn } from './pages/auth/SignIn';
 import { SignUp } from './pages/auth/SignUp';
 import { GoogleCallback, MagicCallback } from './pages/auth/Callback';
+import { StakeholderPortal } from './pages/stakeholder/StakeholderPortal';
 import { Dashboard } from './pages/app/Dashboard';
 import { Ventures } from './pages/app/Ventures';
 import { VentureNew } from './pages/app/VentureNew';
@@ -59,6 +60,7 @@ export const App = (): JSX.Element => (
         <Route path="/sign-up" element={<SignUp />} />
         <Route path="/auth/callback/magic" element={<MagicCallback />} />
         <Route path="/auth/callback/google" element={<GoogleCallback />} />
+        <Route path="/s/:token" element={<StakeholderPortal />} />
 
         <Route path="/errors/403" element={<ForbiddenPage />} />
         <Route path="/errors/500" element={<ServerErrorPage />} />
