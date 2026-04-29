@@ -20,6 +20,7 @@ import { adminRoutes } from './routes/admin.js';
 import { stakeholderRoutes } from './routes/stakeholders.js';
 import { searchRoutes } from './routes/search.js';
 import { tokenRoutes } from './routes/api-tokens.js';
+import { synthesisRoutes } from './routes/synthesis.js';
 
 export const buildApp = () => {
   const cfg = config();
@@ -52,6 +53,7 @@ export const buildApp = () => {
   app.route('/v1/stakeholder', stakeholderRoutes);
   app.route('/v1/search', searchRoutes);
   app.route('/v1/api-tokens', tokenRoutes);
+  app.route('/v1/synthesis', synthesisRoutes);
 
   app.notFound((c) =>
     c.json(
