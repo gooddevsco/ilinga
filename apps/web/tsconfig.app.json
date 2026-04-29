@@ -1,0 +1,12 @@
+{
+  "extends": "@ilinga/tsconfig/react.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "include": ["src/**/*", "vite-env.d.ts"],
+  "references": [
+    { "path": "../../packages/sdk" },
+    { "path": "../../packages/ui" }
+  ]
+}

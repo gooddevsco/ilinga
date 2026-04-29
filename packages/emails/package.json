@@ -1,0 +1,28 @@
+{
+  "name": "@ilinga/emails",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "lint": "eslint .",
+    "typecheck": "tsc -b --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "mjml": "^4.15.3"
+  },
+  "devDependencies": {
+    "@ilinga/eslint-config": "workspace:*",
+    "@ilinga/tsconfig": "workspace:*",
+    "@types/mjml": "^4.7.4",
+    "eslint": "^9.16.0",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
