@@ -1,0 +1,36 @@
+module.exports = {
+  apps: [
+    {
+      name: 'ilinga-api',
+      cwd: '/srv/ilinga/apps/api',
+      script: 'dist/index.js',
+      exec_mode: 'cluster',
+      instances: 2,
+      max_memory_restart: '768M',
+      env_file: '/etc/ilinga/api.env',
+      out_file: '/var/log/ilinga/api.out.log',
+      error_file: '/var/log/ilinga/api.err.log',
+    },
+    {
+      name: 'ilinga-workers',
+      cwd: '/srv/ilinga/apps/workers',
+      script: 'dist/index.js',
+      exec_mode: 'fork',
+      instances: 1,
+      max_memory_restart: '1024M',
+      env_file: '/etc/ilinga/api.env',
+      out_file: '/var/log/ilinga/workers.out.log',
+      error_file: '/var/log/ilinga/workers.err.log',
+    },
+    {
+      name: 'n8n',
+      script: 'n8n',
+      args: 'start',
+      exec_mode: 'fork',
+      instances: 1,
+      max_memory_restart: '1G',
+      env_file: '/etc/ilinga/n8n.env',
+      out_file: '/var/log/ilinga/n8n.out.log',
+    },
+  ],
+};
