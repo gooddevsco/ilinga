@@ -34,6 +34,11 @@ import {
   SettingsTeam,
   SettingsWebhooks,
 } from './pages/app/Settings';
+import { AdminLayout } from './pages/admin/AdminLayout';
+import { AdminOverview } from './pages/admin/AdminOverview';
+import { AdminDsar } from './pages/admin/AdminDsar';
+import { AdminMaintenance } from './pages/admin/AdminMaintenance';
+import { AdminImpersonate } from './pages/admin/AdminImpersonate';
 import {
   ForbiddenPage,
   MaintenancePage,
@@ -91,6 +96,12 @@ export const App = (): JSX.Element => (
           <Route path="api-tokens" element={<SettingsApiTokens />} />
           <Route path="security" element={<SettingsSecurity />} />
           <Route path="privacy" element={<SettingsPrivacy />} />
+        </Route>
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminOverview />} />
+          <Route path="dsar" element={<AdminDsar />} />
+          <Route path="maintenance" element={<AdminMaintenance />} />
+          <Route path="impersonate" element={<AdminImpersonate />} />
         </Route>
       </Route>
 
