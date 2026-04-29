@@ -1,5 +1,9 @@
 import { Hono } from 'hono';
+import { z } from 'zod';
 import { sseRespond } from '../lib/sse/server.js';
+import { requireAuth, requireCsrf } from '../lib/guard.js';
+import { listAnswers, upsertAnswer } from '../lib/ventures/answers.js';
+import { badRequest, HttpProblem } from '../lib/problem.js';
 
 export const cycleRoutes = new Hono();
 
@@ -18,14 +22,42 @@ cycleRoutes.get('/:cid/competitors/:coid/events', (c) =>
 );
 cycleRoutes.get('/:cid/presence', (c) => sseRespond(c, `cycle:${c.req.param('cid')}:presence`));
 
-cycleRoutes.all('*', (c) =>
-  c.json(
-    {
-      type: 'https://ilinga.com/errors/not-implemented',
-      title: 'cycle CRUD endpoints land in Phase 6+',
-      status: 501,
-    },
-    501,
-    { 'Content-Type': 'application/problem+json' },
-  ),
-);
+cycleRoutes.use('/:cid/answers/*', requireAuth);
+cycleRoutes.use('/:cid/answers/*', requireCsrf);
+
+cycleRoutes.get('/:cid/answers', async (c) => {
+  const tenantId = c.req.header('x-il-tenant-id');
+  if (!tenantId) throw badRequest('missing X-Il-Tenant-Id');
+  const answers = await listAnswers(tenantId, c.req.param('cid'));
+  return c.json({ answers });
+});
+
+const UpsertBody = z.object({
+  questionId: z.string().uuid(),
+  rawValue: z.unknown(),
+});
+
+cycleRoutes.put('/:cid/answers', async (c) => {
+  const tenantId = c.req.header('x-il-tenant-id');
+  if (!tenantId) throw badRequest('missing X-Il-Tenant-Id');
+  const body = UpsertBody.safeParse(await c.req.json().catch(() => ({})));
+  if (!body.success) throw badRequest('invalid body');
+  const ifMatch = c.req.header('if-match');
+  const ver = ifMatch === undefined ? null : Number.parseInt(ifMatch, 10);
+  if (ifMatch !== undefined && Number.isNaN(ver)) throw badRequest('invalid If-Match');
+
+  try {
+    const result = await upsertAnswer(
+      tenantId,
+      c.req.param('cid'),
+      body.data.questionId,
+      c.get('userId') as string,
+      body.data.rawValue,
+      ifMatch === undefined ? null : (ver as number),
+    );
+    return c.json(result, 200, { ETag: String(result.version) });
+  } catch (err) {
+    if (err instanceof HttpProblem) throw err;
+    throw err;
+  }
+});
