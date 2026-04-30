@@ -5,6 +5,8 @@ import { api } from '../../lib/api';
 import { useTenant } from '../../lib/tenant';
 import { AgentStream } from '../../features/synthesis/AgentStream';
 import { PipelineGraph, type Stage } from '../../features/synthesis/PipelineGraph';
+import { PresenceDots } from '../../features/synthesis/PresenceDots';
+import { usePresenceBeacon } from '../../lib/streaming/usePresenceBeacon';
 
 const DEFAULT_STAGES: Stage[] = [
   { code: 'narrative.summary', cluster: 'Narrative', label: 'Executive narrative' },
@@ -18,6 +20,7 @@ export const Synthesis = (): JSX.Element => {
   const [running, setRunning] = useState(false);
   const [briefText, setBriefText] = useState('');
   const toast = useToast();
+  usePresenceBeacon(cid, 'synthesis');
 
   if (!current || !vid || !cid) {
     return <p className="text-sm text-[color:var(--color-fg-muted)]">No workspace selected.</p>;
@@ -61,6 +64,7 @@ export const Synthesis = (): JSX.Element => {
           </Link>
           <h1 className="text-2xl font-semibold tracking-tight">Synthesis</h1>
         </div>
+        <PresenceDots cycleId={cid} />
         <div className="flex gap-2">
           <Button onClick={start} loading={running} disabled={running}>
             Run synthesis

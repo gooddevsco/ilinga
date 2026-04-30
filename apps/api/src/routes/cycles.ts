@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
+import { ulid } from 'ulid';
 import { sseRespond } from '../lib/sse/server.js';
+import { sseHub } from '../lib/sse/hub.js';
 import { requireAuth, requireCsrf } from '../lib/guard.js';
 import { listAnswers, upsertAnswer } from '../lib/ventures/answers.js';
 import { badRequest, HttpProblem } from '../lib/problem.js';
@@ -24,6 +26,27 @@ cycleRoutes.get('/:cid/presence', (c) => sseRespond(c, `cycle:${c.req.param('cid
 
 cycleRoutes.use('/:cid/answers/*', requireAuth);
 cycleRoutes.use('/:cid/answers/*', requireCsrf);
+cycleRoutes.use('/:cid/presence/beacon', requireAuth);
+cycleRoutes.use('/:cid/presence/beacon', requireCsrf);
+
+const PresenceBody = z.object({
+  location: z.string().min(1).max(120).optional(),
+  /** 'leave' to broadcast a presence.left immediately on tab close. */
+  intent: z.enum(['heartbeat', 'leave']).default('heartbeat'),
+});
+
+cycleRoutes.post('/:cid/presence/beacon', async (c) => {
+  const body = PresenceBody.safeParse(await c.req.json().catch(() => ({})));
+  if (!body.success) throw badRequest('invalid body');
+  const cycleId = c.req.param('cid');
+  const userId = c.get('userId') as string;
+  await sseHub.publish(`cycle:${cycleId}:presence`, {
+    id: ulid(),
+    event: body.data.intent === 'leave' ? 'presence.left' : 'presence.location',
+    data: { userId, location: body.data.location ?? null },
+  });
+  return c.json({ ok: true });
+});
 
 cycleRoutes.get('/:cid/answers', async (c) => {
   const tenantId = c.req.header('x-il-tenant-id');

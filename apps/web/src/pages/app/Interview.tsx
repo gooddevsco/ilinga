@@ -4,6 +4,8 @@ import { Button, Field, Skeleton, Textarea, useToast } from '@ilinga/ui';
 import { api, type ApiError } from '../../lib/api';
 import { useTenant } from '../../lib/tenant';
 import { Comments } from '../../features/comments/Comments';
+import { PresenceDots } from '../../features/synthesis/PresenceDots';
+import { usePresenceBeacon } from '../../lib/streaming/usePresenceBeacon';
 
 interface Question {
   id: string;
@@ -220,6 +222,9 @@ export const Interview = (): JSX.Element => {
     return Array.from(map.entries());
   }, [questions]);
 
+  // hooks always run; the conditional skeleton below kicks in if cid is undefined
+  usePresenceBeacon(cid, 'interview');
+
   if (!current || !vid || !cid) {
     return <Skeleton height={120} />;
   }
@@ -233,6 +238,7 @@ export const Interview = (): JSX.Element => {
           </Link>
           <h1 className="text-2xl font-semibold tracking-tight">Interview</h1>
         </div>
+        <PresenceDots cycleId={cid} />
         <Link
           to={`/ventures/${vid}/synthesis?cycle=${cid}`}
           className="inline-flex h-9 items-center rounded-md bg-[color:var(--color-accent)] px-4 text-sm text-[color:var(--color-accent-fg)]"
