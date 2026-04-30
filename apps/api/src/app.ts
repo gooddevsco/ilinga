@@ -27,6 +27,7 @@ import { aiEndpointRoutes } from './routes/ai-endpoints.js';
 import { commentRoutes } from './routes/comments.js';
 import { activityRoutes } from './routes/activity.js';
 import { trashRoutes } from './routes/trash.js';
+import { contentKeyRoutes } from './routes/content-keys.js';
 
 export const buildApp = () => {
   const cfg = config();
@@ -41,7 +42,13 @@ export const buildApp = () => {
     cors({
       origin: [cfg.IL_WEB_ORIGIN],
       credentials: true,
-      allowHeaders: ['Content-Type', 'Authorization', 'If-Match', 'X-Il-Csrf', cfg.IL_REQUEST_ID_HEADER],
+      allowHeaders: [
+        'Content-Type',
+        'Authorization',
+        'If-Match',
+        'X-Il-Csrf',
+        cfg.IL_REQUEST_ID_HEADER,
+      ],
       exposeHeaders: ['ETag', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'Retry-After'],
     }),
   );
@@ -66,13 +73,12 @@ export const buildApp = () => {
   app.route('/v1/comments', commentRoutes);
   app.route('/v1/activity', activityRoutes);
   app.route('/v1/trash', trashRoutes);
+  app.route('/v1/content-keys', contentKeyRoutes);
 
   app.notFound((c) =>
-    c.json(
-      { type: 'about:blank', title: 'Not Found', status: 404 },
-      404,
-      { 'Content-Type': 'application/problem+json' },
-    ),
+    c.json({ type: 'about:blank', title: 'Not Found', status: 404 }, 404, {
+      'Content-Type': 'application/problem+json',
+    }),
   );
 
   return app;

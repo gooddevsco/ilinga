@@ -171,6 +171,12 @@ export const VentureDetail = (): JSX.Element => {
                     >
                       Reports
                     </Link>
+                    <Link
+                      to={`/ventures/${venture.id}/cycles/${cy.id}/keys`}
+                      className="text-xs underline"
+                    >
+                      Edit keys
+                    </Link>
                   </div>
                 </li>
               ))}
