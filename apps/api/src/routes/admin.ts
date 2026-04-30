@@ -109,6 +109,27 @@ adminRoutes.post('/maintenance', async (c) => {
   return c.json({ id: row!.id }, 201);
 });
 
+adminRoutes.get('/maintenance', async (c) => {
+  const userId = c.get('userId') as string;
+  await requirePlatformAdmin(userId);
+  const { desc } = await import('drizzle-orm');
+  const rows = await getDb()
+    .select()
+    .from(schema.maintenanceWindows)
+    .orderBy(desc(schema.maintenanceWindows.startsAt))
+    .limit(200);
+  return c.json({ windows: rows });
+});
+
+adminRoutes.delete('/maintenance/:id', async (c) => {
+  const userId = c.get('userId') as string;
+  await requirePlatformAdmin(userId);
+  await getDb()
+    .delete(schema.maintenanceWindows)
+    .where(eq(schema.maintenanceWindows.id, c.req.param('id')));
+  return c.json({ ok: true });
+});
+
 const Impersonate = z.object({
   impersonatedUserId: z.string().uuid(),
   tenantId: z.string().uuid(),

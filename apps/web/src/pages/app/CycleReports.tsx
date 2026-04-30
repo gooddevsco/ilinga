@@ -1,6 +1,18 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Button, Card, CardBody, CardHeader, EmptyState, Skeleton, useToast } from '@ilinga/ui';
+import {
+  Badge,
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
+  EmptyState,
+  Field,
+  Input,
+  Modal,
+  Skeleton,
+  useToast,
+} from '@ilinga/ui';
 import { api, type ApiError } from '../../lib/api';
 import { useTenant } from '../../lib/tenant';
 import { formatDateTZ } from '../../lib/format';
@@ -20,12 +32,26 @@ const TEMPLATE_CHOICES = [
   { code: 'board_brief', label: 'Board Brief', priceLabel: '8 credits' },
 ];
 
+interface Schedule {
+  id: string;
+  reportId: string;
+  cron: string;
+  nextRunAt: string;
+  pausedAt: string | null;
+}
+
 export const CycleReports = (): JSX.Element => {
   const { vid, cid } = useParams<{ vid: string; cid: string }>();
   const { current } = useTenant();
   const [reports, setReports] = useState<Report[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [rendering, setRendering] = useState<string | null>(null);
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [scheduleOpen, setScheduleOpen] = useState<string | null>(null);
+  const [scheduleForm, setScheduleForm] = useState({
+    cron: '0 9 * * 1',
+    nextRunAt: '',
+  });
   const toast = useToast();
 
   const refresh = (): void => {
@@ -34,6 +60,10 @@ export const CycleReports = (): JSX.Element => {
       .get<{ reports: Report[] }>(`/v1/reports/tenant/${current.id}/cycle/${cid}`)
       .then((r) => setReports(r.reports))
       .catch((e: ApiError) => setError(`Status ${e.status}`));
+    api
+      .get<{ schedules: Schedule[] }>(`/v1/reports/tenant/${current.id}/schedules`)
+      .then((r) => setSchedules(r.schedules))
+      .catch(() => setSchedules([]));
   };
 
   useEffect(refresh, [current, cid]);
@@ -50,7 +80,11 @@ export const CycleReports = (): JSX.Element => {
       toast.push({ variant: 'success', title: 'Render queued' });
       refresh();
     } catch (e) {
-      toast.push({ variant: 'error', title: 'Render failed', body: `Status ${(e as ApiError).status}` });
+      toast.push({
+        variant: 'error',
+        title: 'Render failed',
+        body: `Status ${(e as ApiError).status}`,
+      });
     } finally {
       setRendering(null);
     }
@@ -108,27 +142,101 @@ export const CycleReports = (): JSX.Element => {
           </div>
         )}
         {reports && reports.length === 0 && (
-          <EmptyState title="No reports yet" body="Render any of the templates above to get started." />
+          <EmptyState
+            title="No reports yet"
+            body="Render any of the templates above to get started."
+          />
         )}
         {reports && reports.length > 0 && (
           <ul className="grid gap-2">
-            {reports.map((r) => (
-              <li key={r.id}>
-                <Link to={`/reports/${r.id}`}>
+            {reports.map((r) => {
+              const schedule = schedules.find((s) => s.reportId === r.id && !s.pausedAt);
+              return (
+                <li key={r.id}>
                   <Card>
                     <CardBody>
-                      <p className="text-sm font-medium">{r.title}</p>
-                      <p className="text-xs text-[color:var(--color-fg-muted)]">
-                        {formatDateTZ(r.createdAt, 'UTC')} · keys {r.keysHash.slice(0, 12)}…
-                      </p>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <Link to={`/reports/${r.id}`} className="min-w-0">
+                          <p className="text-sm font-medium">{r.title}</p>
+                          <p className="text-xs text-[color:var(--color-fg-muted)]">
+                            {formatDateTZ(r.createdAt, 'UTC')} · keys {r.keysHash.slice(0, 12)}…
+                          </p>
+                        </Link>
+                        <div className="flex items-center gap-2">
+                          {schedule && (
+                            <Badge tone="success">
+                              next {formatDateTZ(schedule.nextRunAt, 'UTC')}
+                            </Badge>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => setScheduleOpen(r.id)}
+                          >
+                            Schedule re-render
+                          </Button>
+                        </div>
+                      </div>
                     </CardBody>
                   </Card>
-                </Link>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
+
+      <Modal
+        open={scheduleOpen !== null}
+        onClose={() => setScheduleOpen(null)}
+        title="Schedule a future re-render"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setScheduleOpen(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!current || !scheduleOpen) return;
+                try {
+                  await api.post(`/v1/reports/tenant/${current.id}/schedules`, {
+                    reportId: scheduleOpen,
+                    cron: scheduleForm.cron,
+                    nextRunAt: new Date(scheduleForm.nextRunAt).toISOString(),
+                  });
+                  toast.push({ variant: 'success', title: 'Schedule saved' });
+                  setScheduleOpen(null);
+                  refresh();
+                } catch {
+                  toast.push({ variant: 'error', title: 'Could not save schedule' });
+                }
+              }}
+            >
+              Save
+            </Button>
+          </>
+        }
+      >
+        <Field
+          label="Cron schedule"
+          htmlFor="cr-cron"
+          hint="e.g. '0 9 * * 1' = Mondays at 09:00 UTC"
+        >
+          <Input
+            id="cr-cron"
+            value={scheduleForm.cron}
+            onChange={(e) => setScheduleForm({ ...scheduleForm, cron: e.target.value })}
+          />
+        </Field>
+        <Field label="First run" htmlFor="cr-first">
+          <Input
+            id="cr-first"
+            type="datetime-local"
+            value={scheduleForm.nextRunAt}
+            onChange={(e) => setScheduleForm({ ...scheduleForm, nextRunAt: e.target.value })}
+          />
+        </Field>
+      </Modal>
     </div>
   );
 };

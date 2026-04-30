@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Card, CardBody, CardHeader, Skeleton, useToast } from '@ilinga/ui';
+import { Button, Card, CardBody, CardHeader, Skeleton, useToast } from '@ilinga/ui';
 import { api, type ApiError } from '../../lib/api';
 import { useTenant } from '../../lib/tenant';
 import { formatDateTZ } from '../../lib/format';
@@ -135,6 +135,67 @@ export const VentureDetail = (): JSX.Element => {
           >
             Edit thesis
           </button>
+        </CardBody>
+      </Card>
+      <Card>
+        <CardHeader>Cycles</CardHeader>
+        <CardBody>
+          {cycles.length === 0 ? (
+            <p className="text-sm text-[color:var(--color-fg-muted)]">No cycles yet.</p>
+          ) : (
+            <ul className="space-y-2">
+              {cycles.map((cy) => (
+                <li
+                  key={cy.id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-[color:var(--color-border)] px-3 py-2 text-sm"
+                >
+                  <div>
+                    Cycle <strong>v{cy.seq}</strong> · {cy.status}
+                  </div>
+                  <div className="flex gap-2">
+                    <Link
+                      to={`/ventures/${venture.id}/cycles/${cy.id}/interview`}
+                      className="text-xs underline"
+                    >
+                      Interview
+                    </Link>
+                    <Link
+                      to={`/ventures/${venture.id}/cycles/${cy.id}/synthesis`}
+                      className="text-xs underline"
+                    >
+                      Synthesis
+                    </Link>
+                    <Link
+                      to={`/ventures/${venture.id}/cycles/${cy.id}/reports`}
+                      className="text-xs underline"
+                    >
+                      Reports
+                    </Link>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          <Button
+            variant="secondary"
+            className="mt-4"
+            onClick={async () => {
+              if (!openCycle) return;
+              try {
+                const r = await api.post<{ id: string; seq: number }>(
+                  `/v1/ventures/tenant/${current!.id}/cycles/clone`,
+                  { cycleId: openCycle.id },
+                );
+                toast.push({ variant: 'success', title: `Cloned to v${r.seq}` });
+                setCycles((prev) => [...prev, { id: r.id, seq: r.seq, status: 'open' }]);
+              } catch {
+                toast.push({ variant: 'error', title: 'Could not clone cycle' });
+              }
+            }}
+            disabled={!openCycle}
+          >
+            Clone open cycle
+          </Button>
         </CardBody>
       </Card>
     </div>

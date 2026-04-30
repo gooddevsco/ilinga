@@ -111,7 +111,10 @@ reportRoutes.get('/:rid', async (c) => {
     .select()
     .from(schema.tenantMembers)
     .where(
-      and(eq(schema.tenantMembers.tenantId, rep[0].tenantId), eq(schema.tenantMembers.userId, userId)),
+      and(
+        eq(schema.tenantMembers.tenantId, rep[0].tenantId),
+        eq(schema.tenantMembers.userId, userId),
+      ),
     )
     .limit(1);
   if (!member[0]) throw notFound();
@@ -122,15 +125,56 @@ reportRoutes.get('/:rid', async (c) => {
   return c.json({ report: rep[0], renders });
 });
 
-reportRoutes.post(
-  '/tenant/:tid/render/:rid/cancel',
-  requireTenantMembership('tid'),
-  async (c) => {
-    const db = getDb();
-    await db
-      .update(schema.reportRenders)
-      .set({ status: 'cancelled', cancelledAt: new Date() })
-      .where(eq(schema.reportRenders.id, c.req.param('rid')));
-    return c.json({ ok: true });
-  },
-);
+reportRoutes.post('/tenant/:tid/render/:rid/cancel', requireTenantMembership('tid'), async (c) => {
+  const db = getDb();
+  await db
+    .update(schema.reportRenders)
+    .set({ status: 'cancelled', cancelledAt: new Date() })
+    .where(eq(schema.reportRenders.id, c.req.param('rid')));
+  return c.json({ ok: true });
+});
+
+const Schedule = z.object({
+  reportId: z.string().uuid(),
+  cron: z.string().min(5).max(120),
+  nextRunAt: z.string().datetime(),
+});
+
+reportRoutes.post('/tenant/:tid/schedules', requireTenantMembership('tid'), async (c) => {
+  const body = Schedule.safeParse(await c.req.json().catch(() => ({})));
+  if (!body.success) throw notFound();
+  const userId = c.get('userId') as string;
+  const [row] = await getDb()
+    .insert(schema.reportSchedules)
+    .values({
+      tenantId: c.req.param('tid'),
+      reportId: body.data.reportId,
+      cron: body.data.cron,
+      nextRunAt: new Date(body.data.nextRunAt),
+      createdBy: userId,
+    })
+    .returning({ id: schema.reportSchedules.id });
+  return c.json({ id: row!.id }, 201);
+});
+
+reportRoutes.get('/tenant/:tid/schedules', requireTenantMembership('tid'), async (c) => {
+  const { desc } = await import('drizzle-orm');
+  const rows = await getDb()
+    .select()
+    .from(schema.reportSchedules)
+    .where(eq(schema.reportSchedules.tenantId, c.req.param('tid')))
+    .orderBy(desc(schema.reportSchedules.createdAt));
+  return c.json({ schedules: rows });
+});
+
+reportRoutes.delete('/tenant/:tid/schedules/:sid', requireTenantMembership('tid'), async (c) => {
+  await getDb()
+    .delete(schema.reportSchedules)
+    .where(
+      and(
+        eq(schema.reportSchedules.id, c.req.param('sid')),
+        eq(schema.reportSchedules.tenantId, c.req.param('tid')),
+      ),
+    );
+  return c.json({ ok: true });
+});
