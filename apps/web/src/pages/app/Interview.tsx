@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { Button, Field, Skeleton, Textarea, useToast } from '@ilinga/ui';
 import { api, type ApiError } from '../../lib/api';
 import { useTenant } from '../../lib/tenant';
+import { Comments } from '../../features/comments/Comments';
 
 interface Question {
   id: string;
@@ -47,16 +48,76 @@ export const Interview = (): JSX.Element => {
   const questions = useMemo<Question[]>(() => {
     if (questionsData?.questions) return questionsData.questions;
     return [
-      { id: 'P1.1', code: 'P1.1', cluster: 'Problem', label: 'Who has this problem most acutely?', helpText: null, inputType: 'text', sequence: 100 },
-      { id: 'P1.2', code: 'P1.2', cluster: 'Problem', label: 'What do they currently do about it?', helpText: null, inputType: 'text', sequence: 110 },
-      { id: 'S1.1', code: 'S1.1', cluster: 'Solution', label: 'What is your wedge?', helpText: null, inputType: 'text', sequence: 200 },
-      { id: 'M1.1', code: 'M1.1', cluster: 'Market', label: 'How big is the market today, in dollars?', helpText: null, inputType: 'number', sequence: 300 },
-      { id: 'G1.1', code: 'G1.1', cluster: 'GTM', label: 'What is your first acquisition channel?', helpText: null, inputType: 'text', sequence: 400 },
-      { id: 'R1.1', code: 'R1.1', cluster: 'Risk', label: 'Single biggest risk that could kill the business?', helpText: null, inputType: 'text', sequence: 500 },
+      {
+        id: 'P1.1',
+        code: 'P1.1',
+        cluster: 'Problem',
+        label: 'Who has this problem most acutely?',
+        helpText: null,
+        inputType: 'text',
+        sequence: 100,
+      },
+      {
+        id: 'P1.2',
+        code: 'P1.2',
+        cluster: 'Problem',
+        label: 'What do they currently do about it?',
+        helpText: null,
+        inputType: 'text',
+        sequence: 110,
+      },
+      {
+        id: 'S1.1',
+        code: 'S1.1',
+        cluster: 'Solution',
+        label: 'What is your wedge?',
+        helpText: null,
+        inputType: 'text',
+        sequence: 200,
+      },
+      {
+        id: 'M1.1',
+        code: 'M1.1',
+        cluster: 'Market',
+        label: 'How big is the market today, in dollars?',
+        helpText: null,
+        inputType: 'number',
+        sequence: 300,
+      },
+      {
+        id: 'G1.1',
+        code: 'G1.1',
+        cluster: 'GTM',
+        label: 'What is your first acquisition channel?',
+        helpText: null,
+        inputType: 'text',
+        sequence: 400,
+      },
+      {
+        id: 'R1.1',
+        code: 'R1.1',
+        cluster: 'Risk',
+        label: 'Single biggest risk that could kill the business?',
+        helpText: null,
+        inputType: 'text',
+        sequence: 500,
+      },
     ];
   }, [questionsData]);
 
-  const [answers, setAnswers] = useState<Record<string, { value: string; version: number | null; saving: boolean; conflict?: { current: string } }>>({});
+  const [answers, setAnswers] = useState<
+    Record<
+      string,
+      {
+        value: string;
+        version: number | null;
+        saving: boolean;
+        conflict?: { current: string };
+        answerId?: string;
+      }
+    >
+  >({});
+  const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
 
   // Load existing answers
   useEffect(() => {
@@ -64,12 +125,16 @@ export const Interview = (): JSX.Element => {
     api
       .get<{ answers: AnswerRow[] }>(`/v1/cycles/${cid}/answers`)
       .then((r) => {
-        const next: Record<string, { value: string; version: number | null; saving: boolean }> = {};
+        const next: Record<
+          string,
+          { value: string; version: number | null; saving: boolean; answerId?: string }
+        > = {};
         for (const a of r.answers) {
           next[a.questionId] = {
             value: typeof a.rawValue === 'string' ? a.rawValue : JSON.stringify(a.rawValue ?? ''),
             version: a.version,
             saving: false,
+            answerId: a.id,
           };
         }
         setAnswers((prev) => ({ ...next, ...prev }));
@@ -86,21 +151,27 @@ export const Interview = (): JSX.Element => {
     }));
     try {
       const headers: Record<string, string> = {};
-      if (ans?.version !== null && ans?.version !== undefined) headers['If-Match'] = String(ans.version);
-      const res = await fetch(`${import.meta.env['VITE_API_ORIGIN'] ?? 'http://localhost:3001'}/v1/cycles/${cid}/answers`, {
-        method: 'PUT',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Il-Tenant-Id': current.id,
-          'X-Il-Csrf':
-            decodeURIComponent(
-              document.cookie.split('; ').find((c) => c.startsWith('il_csrf='))?.split('=')[1] ?? '',
+      if (ans?.version !== null && ans?.version !== undefined)
+        headers['If-Match'] = String(ans.version);
+      const res = await fetch(
+        `${import.meta.env['VITE_API_ORIGIN'] ?? 'http://localhost:3001'}/v1/cycles/${cid}/answers`,
+        {
+          method: 'PUT',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Il-Tenant-Id': current.id,
+            'X-Il-Csrf': decodeURIComponent(
+              document.cookie
+                .split('; ')
+                .find((c) => c.startsWith('il_csrf='))
+                ?.split('=')[1] ?? '',
             ),
-          ...headers,
+            ...headers,
+          },
+          body: JSON.stringify({ questionId: q.id, rawValue: value }),
         },
-        body: JSON.stringify({ questionId: q.id, rawValue: value }),
-      });
+      );
       if (res.status === 412) {
         const body = (await res.json()) as { currentVersion: number; currentValue: unknown };
         setAnswers((prev) => ({
@@ -109,7 +180,12 @@ export const Interview = (): JSX.Element => {
             value,
             version: body.currentVersion,
             saving: false,
-            conflict: { current: typeof body.currentValue === 'string' ? body.currentValue : JSON.stringify(body.currentValue) },
+            conflict: {
+              current:
+                typeof body.currentValue === 'string'
+                  ? body.currentValue
+                  : JSON.stringify(body.currentValue),
+            },
           },
         }));
         toast.push({
@@ -123,7 +199,7 @@ export const Interview = (): JSX.Element => {
       const body = (await res.json()) as { id: string; version: number };
       setAnswers((prev) => ({
         ...prev,
-        [q.id]: { value, version: body.version, saving: false },
+        [q.id]: { value, version: body.version, saving: false, answerId: body.id },
       }));
     } catch {
       setAnswers((prev) => ({
@@ -172,10 +248,7 @@ export const Interview = (): JSX.Element => {
           {qs.map((q) => {
             const a = answers[q.id];
             return (
-              <div
-                key={q.id}
-                className="rounded-lg border border-[color:var(--color-border)] p-4"
-              >
+              <div key={q.id} className="rounded-lg border border-[color:var(--color-border)] p-4">
                 <Field label={q.label} htmlFor={q.id} hint={q.helpText ?? undefined}>
                   <Textarea
                     id={q.id}
@@ -189,6 +262,20 @@ export const Interview = (): JSX.Element => {
                   {a?.saving && <span aria-live="polite">Saving…</span>}
                   {!a?.saving && a?.version !== null && a?.version !== undefined && (
                     <span>Saved (v{a.version})</span>
+                  )}
+                  {a?.answerId && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setOpenComments((prev) => ({
+                          ...prev,
+                          [q.id]: !prev[q.id],
+                        }))
+                      }
+                      className="ml-auto underline"
+                    >
+                      {openComments[q.id] ? 'Hide comments' : 'Comments'}
+                    </button>
                   )}
                   {a?.conflict && (
                     <span className="text-[color:var(--color-warning)]">
@@ -204,6 +291,11 @@ export const Interview = (): JSX.Element => {
                     </span>
                   )}
                 </div>
+                {openComments[q.id] && a?.answerId && (
+                  <div className="mt-3 border-t border-[color:var(--color-border)] pt-3">
+                    <Comments target="question_answers" targetId={a.answerId} cycleId={cid} />
+                  </div>
+                )}
               </div>
             );
           })}

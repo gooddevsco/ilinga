@@ -4,9 +4,11 @@ import { Badge, Card, CardBody, CardHeader, Skeleton } from '@ilinga/ui';
 import { api, type ApiError } from '../../lib/api';
 import { formatDateTZ } from '../../lib/format';
 import { Comments } from '../../features/comments/Comments';
+import { RenderProgress } from '../../features/synthesis/RenderProgress';
 
 interface Report {
   id: string;
+  cycleId: string;
   title: string;
   inputKeySnapshot: Record<string, unknown>;
   createdAt: string;
@@ -19,6 +21,7 @@ interface Render {
   pdfS3Key: string | null;
   pageCount: number | null;
   completedAt: string | null;
+  queuedAt: string;
 }
 
 export const ReportViewer = (): JSX.Element => {
@@ -37,6 +40,13 @@ export const ReportViewer = (): JSX.Element => {
   if (error) return <p className="text-sm text-[color:var(--color-danger)]">{error}</p>;
   if (!data) return <Skeleton height={200} />;
 
+  // Most recent in-flight render gets a live progress strip; completed ones don't.
+  const latest = [...data.renders].sort(
+    (a, b) => new Date(b.queuedAt).getTime() - new Date(a.queuedAt).getTime(),
+  )[0];
+  const liveRender =
+    latest && (latest.status === 'queued' || latest.status === 'rendering') ? latest : null;
+
   return (
     <div className="space-y-6">
       <header>
@@ -48,15 +58,19 @@ export const ReportViewer = (): JSX.Element => {
           Snapshot taken {formatDateTZ(data.report.createdAt, 'UTC')}
         </p>
       </header>
+      {liveRender && (
+        <RenderProgress
+          cycleId={data.report.cycleId}
+          reportId={data.report.id}
+          renderId={liveRender.id}
+        />
+      )}
       <Card>
         <CardHeader>Renders</CardHeader>
         <CardBody>
           <ul className="space-y-2">
             {data.renders.map((r) => (
-              <li
-                key={r.id}
-                className="flex flex-wrap items-center justify-between gap-2 text-sm"
-              >
+              <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
                 <div>
                   <Badge tone={r.status === 'complete' ? 'success' : 'warning'}>{r.status}</Badge>{' '}
                   {r.completedAt && (
@@ -98,7 +112,7 @@ export const ReportViewer = (): JSX.Element => {
       </Card>
       <Card>
         <CardBody>
-          <Comments target="reports" targetId={data.report.id} />
+          <Comments target="reports" targetId={data.report.id} cycleId={data.report.cycleId} />
         </CardBody>
       </Card>
     </div>
