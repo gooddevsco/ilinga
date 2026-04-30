@@ -4,7 +4,6 @@ import {
   Button,
   Card,
   CardBody,
-  CardHeader,
   EmptyState,
   Field,
   Input,
@@ -23,6 +22,17 @@ interface Endpoint {
   createdAt: string;
 }
 
+interface Delivery {
+  id: string;
+  eventType: string;
+  status: string;
+  attempts: number;
+  lastResponseStatus: number | null;
+  lastResponseBody: string | null;
+  createdAt: string;
+  deliveredAt: string | null;
+}
+
 const EVENT_OPTIONS = [
   'cycle.started',
   'cycle.complete',
@@ -39,7 +49,40 @@ export const SettingsWebhooks = (): JSX.Element => {
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ url: '', events: [] as string[] });
   const [revealedSecret, setRevealedSecret] = useState<string | null>(null);
+  const [deliveriesFor, setDeliveriesFor] = useState<string | null>(null);
+  const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const toast = useToast();
+
+  const loadDeliveries = async (endpointId: string): Promise<void> => {
+    if (!current) return;
+    setDeliveriesFor(endpointId);
+    setDeliveries([]);
+    try {
+      const r = await api.get<{ deliveries: Delivery[] }>(
+        `/v1/webhooks/tenant/${current.id}/${endpointId}/deliveries`,
+      );
+      setDeliveries(r.deliveries);
+    } catch {
+      toast.push({ variant: 'error', title: 'Could not load deliveries' });
+    }
+  };
+
+  const replay = async (endpointId: string, deliveryId: string): Promise<void> => {
+    if (!current) return;
+    try {
+      const r = await api.post<{ ok: boolean; status: number }>(
+        `/v1/webhooks/tenant/${current.id}/${endpointId}/deliveries/${deliveryId}/replay`,
+      );
+      toast.push({
+        variant: r.ok ? 'success' : 'error',
+        title: r.ok ? 'Replayed' : 'Replay failed',
+        body: `Endpoint returned ${r.status}.`,
+      });
+      void loadDeliveries(endpointId);
+    } catch {
+      toast.push({ variant: 'error', title: 'Replay failed' });
+    }
+  };
 
   const refresh = (): void => {
     if (!current) return;
@@ -77,7 +120,8 @@ export const SettingsWebhooks = (): JSX.Element => {
   };
 
   const rotate = async (id: string): Promise<void> => {
-    if (!window.confirm('Rotate the signing secret? Both old + new are accepted for 24 hours.')) return;
+    if (!window.confirm('Rotate the signing secret? Both old + new are accepted for 24 hours.'))
+      return;
     const r = await api.post<{ secret: string }>(`/v1/webhooks/tenant/${current.id}/${id}/rotate`);
     setRevealedSecret(r.secret);
   };
@@ -130,8 +174,55 @@ export const SettingsWebhooks = (): JSX.Element => {
                       <Button size="sm" variant="secondary" onClick={() => rotate(e.id)}>
                         Rotate secret
                       </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => void loadDeliveries(e.id)}
+                      >
+                        Deliveries
+                      </Button>
                     </div>
                   </div>
+                  {deliveriesFor === e.id && (
+                    <div className="mt-3 border-t border-[color:var(--color-border)] pt-3">
+                      {deliveries.length === 0 ? (
+                        <p className="text-xs text-[color:var(--color-fg-muted)]">
+                          No deliveries yet.
+                        </p>
+                      ) : (
+                        <ul className="space-y-2 text-xs">
+                          {deliveries.map((d) => (
+                            <li
+                              key={d.id}
+                              className="flex flex-wrap items-start justify-between gap-2"
+                            >
+                              <div className="min-w-0">
+                                <span>
+                                  <Badge tone={d.status === 'delivered' ? 'success' : 'warning'}>
+                                    {d.status}
+                                  </Badge>{' '}
+                                  <strong>{d.eventType}</strong> · {d.lastResponseStatus ?? '—'} ·
+                                  attempts {d.attempts}
+                                </span>
+                                {d.lastResponseBody && (
+                                  <p className="mt-1 truncate text-[color:var(--color-fg-muted)]">
+                                    {d.lastResponseBody.slice(0, 200)}
+                                  </p>
+                                )}
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => void replay(e.id, d.id)}
+                              >
+                                Replay
+                              </Button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
                 </CardBody>
               </Card>
             </li>
@@ -189,13 +280,11 @@ export const SettingsWebhooks = (): JSX.Element => {
         open={revealedSecret !== null}
         onClose={() => setRevealedSecret(null)}
         title="Save this secret now"
-        footer={
-          <Button onClick={() => setRevealedSecret(null)}>I&apos;ve saved it</Button>
-        }
+        footer={<Button onClick={() => setRevealedSecret(null)}>I&apos;ve saved it</Button>}
       >
         <p className="text-sm">
-          This secret is shown once. We store only its ciphertext. Verify webhook payloads with HMAC-SHA256
-          over the raw body.
+          This secret is shown once. We store only its ciphertext. Verify webhook payloads with
+          HMAC-SHA256 over the raw body.
         </p>
         <pre className="mt-3 overflow-x-auto rounded bg-[color:var(--color-accent-soft)] p-3 font-mono text-xs">
           {revealedSecret}
