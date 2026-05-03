@@ -4,7 +4,12 @@ import { schema, getDb } from '@ilinga/db';
 export const createVenture = async (
   tenantId: string,
   userId: string,
-  input: { name: string; industry?: string | null; geos?: string[]; brief?: Record<string, unknown> },
+  input: {
+    name: string;
+    industry?: string | null;
+    geos?: string[];
+    brief?: Record<string, unknown>;
+  },
 ) => {
   const db = getDb();
   const [venture] = await db
@@ -86,6 +91,69 @@ export const cloneCycle = async (
     .returning({ id: schema.ventureCycles.id, seq: schema.ventureCycles.seq });
   if (!created) throw new Error('clone failed');
   return created;
+};
+
+export const closeCycle = async (tenantId: string, cycleId: string): Promise<void> => {
+  const now = new Date();
+  await getDb()
+    .update(schema.ventureCycles)
+    .set({ status: 'closed', closedAt: now, frozenAt: now })
+    .where(and(eq(schema.ventureCycles.id, cycleId), eq(schema.ventureCycles.tenantId, tenantId)));
+};
+
+export const cycleSummary = async (
+  tenantId: string,
+  cycleId: string,
+): Promise<{
+  cycle: typeof schema.ventureCycles.$inferSelect;
+  contentKeys: { code: string; value: unknown; version: number }[];
+  artifactCount: number;
+  competitorCount: number;
+  reportCount: number;
+}> => {
+  const db = getDb();
+  const [cycle] = await db
+    .select()
+    .from(schema.ventureCycles)
+    .where(and(eq(schema.ventureCycles.id, cycleId), eq(schema.ventureCycles.tenantId, tenantId)))
+    .limit(1);
+  if (!cycle) throw new Error('cycle not found');
+  const keyRows = await db
+    .select({
+      code: schema.contentKeys.code,
+      value: schema.contentKeys.value,
+      version: schema.contentKeys.version,
+    })
+    .from(schema.contentKeys)
+    .where(and(eq(schema.contentKeys.tenantId, tenantId), eq(schema.contentKeys.cycleId, cycleId)))
+    .orderBy(desc(schema.contentKeys.version));
+  const latest = new Map<string, (typeof keyRows)[number]>();
+  for (const r of keyRows) if (!latest.has(r.code)) latest.set(r.code, r);
+  const [artifactCount] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(schema.ventureArtifacts)
+    .where(
+      and(
+        eq(schema.ventureArtifacts.tenantId, tenantId),
+        eq(schema.ventureArtifacts.cycleId, cycleId),
+        isNull(schema.ventureArtifacts.deletedAt),
+      ),
+    );
+  const [competitorCount] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(schema.competitors)
+    .where(and(eq(schema.competitors.tenantId, tenantId), eq(schema.competitors.cycleId, cycleId)));
+  const [reportCount] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(schema.reports)
+    .where(and(eq(schema.reports.tenantId, tenantId), eq(schema.reports.cycleId, cycleId)));
+  return {
+    cycle,
+    contentKeys: Array.from(latest.values()),
+    artifactCount: artifactCount?.n ?? 0,
+    competitorCount: competitorCount?.n ?? 0,
+    reportCount: reportCount?.n ?? 0,
+  };
 };
 
 export const softDeleteVenture = async (

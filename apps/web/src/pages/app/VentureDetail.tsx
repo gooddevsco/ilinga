@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Button, Card, CardBody, CardHeader, Skeleton, useToast } from '@ilinga/ui';
+import { Badge, Button, Card, CardBody, CardHeader, Modal, Skeleton, useToast } from '@ilinga/ui';
 import { api, type ApiError } from '../../lib/api';
 import { useTenant } from '../../lib/tenant';
 import { formatDateTZ } from '../../lib/format';
@@ -20,12 +20,22 @@ interface Cycle {
   status: string;
 }
 
+interface CycleSummary {
+  cycle: { id: string; seq: number; status: string; closedAt: string | null };
+  contentKeys: { code: string; value: unknown; version: number }[];
+  artifactCount: number;
+  competitorCount: number;
+  reportCount: number;
+}
+
 export const VentureDetail = (): JSX.Element => {
   const { id } = useParams<{ id: string }>();
   const { current } = useTenant();
   const [venture, setVenture] = useState<Venture | null>(null);
   const [cycles, setCycles] = useState<Cycle[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [closeOpen, setCloseOpen] = useState<Cycle | null>(null);
+  const [closeSummary, setCloseSummary] = useState<CycleSummary | null>(null);
   const toast = useToast();
 
   useEffect(() => {
@@ -116,25 +126,9 @@ export const VentureDetail = (): JSX.Element => {
               {venture.brief.wedge}
             </p>
           )}
-          <button
-            type="button"
-            className="mt-3 text-sm underline"
-            onClick={async () => {
-              const next = window.prompt('New thesis', venture.brief.thesis ?? '');
-              if (next === null) return;
-              try {
-                await api.patch(`/v1/ventures/tenant/${current!.id}/${venture.id}/brief`, {
-                  brief: { ...venture.brief, thesis: next },
-                });
-                toast.push({ variant: 'success', title: 'Brief updated' });
-                setVenture({ ...venture, brief: { ...venture.brief, thesis: next } });
-              } catch {
-                toast.push({ variant: 'error', title: 'Could not update brief' });
-              }
-            }}
-          >
-            Edit thesis
-          </button>
+          <Link to={`/ventures/${venture.id}/edit`} className="mt-3 inline-block text-sm underline">
+            Edit brief
+          </Link>
         </CardBody>
       </Card>
       <Card>
@@ -177,10 +171,45 @@ export const VentureDetail = (): JSX.Element => {
                     >
                       Edit keys
                     </Link>
+                    {cy.status === 'open' && (
+                      <button
+                        type="button"
+                        className="text-xs text-[color:var(--color-warning)] underline"
+                        onClick={async () => {
+                          setCloseOpen(cy);
+                          setCloseSummary(null);
+                          try {
+                            const r = await api.get<CycleSummary>(
+                              `/v1/ventures/tenant/${current!.id}/cycles/${cy.id}/summary`,
+                            );
+                            setCloseSummary(r);
+                          } catch {
+                            toast.push({
+                              variant: 'error',
+                              title: 'Could not load cycle summary',
+                            });
+                          }
+                        }}
+                      >
+                        Close
+                      </button>
+                    )}
+                    {cy.status === 'closed' && <Badge tone="neutral">closed</Badge>}
                   </div>
                 </li>
               ))}
             </ul>
+          )}
+          {cycles.length >= 2 && (
+            <Link
+              className="mt-3 block text-xs underline"
+              to={`/ventures/${venture.id}/compare?a=${cycles[0]!.id}&b=${cycles[1]!.id}`}
+            >
+              Compare{' '}
+              {cycles[0]!.seq === cycles[1]!.seq
+                ? 'two'
+                : `v${cycles[0]!.seq} vs v${cycles[1]!.seq}`}
+            </Link>
           )}
           <Button
             variant="secondary"
@@ -204,6 +233,53 @@ export const VentureDetail = (): JSX.Element => {
           </Button>
         </CardBody>
       </Card>
+      <Modal
+        open={closeOpen !== null}
+        onClose={() => setCloseOpen(null)}
+        title={closeOpen ? `Close cycle v${closeOpen.seq}?` : 'Close cycle'}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setCloseOpen(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={async () => {
+                if (!closeOpen) return;
+                try {
+                  await api.post(`/v1/ventures/tenant/${current!.id}/cycles/${closeOpen.id}/close`);
+                  toast.push({ variant: 'success', title: 'Cycle closed' });
+                  setCloseOpen(null);
+                  setCycles((prev) =>
+                    prev.map((c) => (c.id === closeOpen.id ? { ...c, status: 'closed' } : c)),
+                  );
+                } catch {
+                  toast.push({ variant: 'error', title: 'Close failed' });
+                }
+              }}
+            >
+              Close cycle
+            </Button>
+          </>
+        }
+      >
+        {!closeSummary ? (
+          <Skeleton height={120} />
+        ) : (
+          <div className="space-y-2 text-sm">
+            <p>
+              You are about to close the cycle. The interview answers and content keys are frozen
+              and a new cycle would have to be cloned to continue work.
+            </p>
+            <ul className="list-disc pl-5 text-xs text-[color:var(--color-fg-muted)]">
+              <li>{closeSummary.contentKeys.length} content key(s) frozen</li>
+              <li>{closeSummary.artifactCount} artifact(s)</li>
+              <li>{closeSummary.competitorCount} competitor(s)</li>
+              <li>{closeSummary.reportCount} report(s)</li>
+            </ul>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

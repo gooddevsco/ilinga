@@ -5,7 +5,9 @@ import { schema, getDb } from '@ilinga/db';
 import { requireAuth, requireCsrf, requireTenantMembership } from '../lib/guard.js';
 import {
   cloneCycle,
+  closeCycle,
   createVenture,
+  cycleSummary,
   getVenture,
   listVentures,
   softDeleteVenture,
@@ -76,6 +78,39 @@ const CloneBody = z.object({ cycleId: z.string().uuid() });
 ventureRoutes.post('/tenant/:tid/cycles/clone', requireTenantMembership('tid'), async (c) => {
   const body = CloneBody.safeParse(await c.req.json().catch(() => ({})));
   if (!body.success) throw badRequest('invalid body');
-  const created = await cloneCycle(c.req.param('tid'), c.get('userId') as string, body.data.cycleId);
+  const created = await cloneCycle(
+    c.req.param('tid'),
+    c.get('userId') as string,
+    body.data.cycleId,
+  );
   return c.json(created, 201);
+});
+
+ventureRoutes.post('/tenant/:tid/cycles/:cid/close', requireTenantMembership('tid'), async (c) => {
+  await closeCycle(c.req.param('tid'), c.req.param('cid'));
+  return c.json({ ok: true });
+});
+
+ventureRoutes.get('/tenant/:tid/cycles/:cid/summary', requireTenantMembership('tid'), async (c) => {
+  const summary = await cycleSummary(c.req.param('tid'), c.req.param('cid'));
+  return c.json(summary);
+});
+
+ventureRoutes.get('/tenant/:tid/cycles/compare', requireTenantMembership('tid'), async (c) => {
+  const a = c.req.query('a');
+  const b = c.req.query('b');
+  if (!a || !b) throw badRequest('require ?a=<cycleId>&b=<cycleId>');
+  const [sa, sb] = await Promise.all([
+    cycleSummary(c.req.param('tid'), a),
+    cycleSummary(c.req.param('tid'), b),
+  ]);
+  // join keys by code so the UI can render side-by-side rows
+  const byCode = new Map<string, { a?: unknown; b?: unknown }>();
+  for (const k of sa.contentKeys) byCode.set(k.code, { ...byCode.get(k.code), a: k.value });
+  for (const k of sb.contentKeys) byCode.set(k.code, { ...byCode.get(k.code), b: k.value });
+  return c.json({
+    a: sa,
+    b: sb,
+    diff: Array.from(byCode.entries()).map(([code, value]) => ({ code, ...value })),
+  });
 });

@@ -18,6 +18,8 @@ import { Dashboard } from './pages/app/Dashboard';
 import { Ventures } from './pages/app/Ventures';
 import { VentureNew } from './pages/app/VentureNew';
 import { VentureDetail } from './pages/app/VentureDetail';
+import { VentureEdit } from './pages/app/VentureEdit';
+import { CycleCompare } from './pages/app/CycleCompare';
 import { Interview } from './pages/app/Interview';
 import { Synthesis } from './pages/app/Synthesis';
 import { CycleReports } from './pages/app/CycleReports';
@@ -85,6 +87,8 @@ export const App = (): JSX.Element => (
         <Route path="/ventures" element={<Ventures />} />
         <Route path="/ventures/new" element={<VentureNew />} />
         <Route path="/ventures/:id" element={<VentureDetail />} />
+        <Route path="/ventures/:id/edit" element={<VentureEdit />} />
+        <Route path="/ventures/:vid/compare" element={<CycleCompare />} />
         <Route path="/ventures/:vid/cycles/:cid/interview" element={<Interview />} />
         <Route path="/ventures/:vid/cycles/:cid/synthesis" element={<Synthesis />} />
         <Route path="/ventures/:vid/cycles/:cid/reports" element={<CycleReports />} />
