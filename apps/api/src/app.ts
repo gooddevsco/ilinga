@@ -30,6 +30,8 @@ import { trashRoutes } from './routes/trash.js';
 import { contentKeyRoutes } from './routes/content-keys.js';
 import { artifactRoutes } from './routes/artifacts.js';
 import { competitorRoutes } from './routes/competitors.js';
+import { notificationRoutes } from './routes/notifications.js';
+import { sessionRoutes } from './routes/sessions.js';
 import { apiRequestLog, enforceReadOnly, globalWriteLimit } from './lib/middleware-extra.js';
 
 export const buildApp = () => {
@@ -82,6 +84,8 @@ export const buildApp = () => {
   app.route('/v1/content-keys', contentKeyRoutes);
   app.route('/v1/artifacts', artifactRoutes);
   app.route('/v1/competitors', competitorRoutes);
+  app.route('/v1/notifications', notificationRoutes);
+  app.route('/v1/sessions', sessionRoutes);
 
   app.notFound((c) =>
     c.json({ type: 'about:blank', title: 'Not Found', status: 404 }, 404, {

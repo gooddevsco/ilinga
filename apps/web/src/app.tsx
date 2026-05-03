@@ -30,6 +30,7 @@ import { ReportViewer } from './pages/app/ReportViewer';
 import { Reports } from './pages/app/Reports';
 import { Credits } from './pages/app/Credits';
 import { Trash } from './pages/app/Trash';
+import { Notifications } from './pages/app/Notifications';
 import {
   SettingsLayout,
   SettingsAi,
@@ -41,6 +42,7 @@ import {
   SettingsTeam,
   SettingsWebhooks,
   SettingsWorkspace,
+  SettingsSessions,
 } from './pages/app/Settings';
 import { AdminLayout } from './pages/admin/AdminLayout';
 import { AdminOverview } from './pages/admin/AdminOverview';
@@ -100,6 +102,7 @@ export const App = (): JSX.Element => (
         <Route path="/reports/:id" element={<ReportViewer />} />
         <Route path="/credits" element={<Credits />} />
         <Route path="/trash" element={<Trash />} />
+        <Route path="/notifications" element={<Notifications />} />
         <Route path="/settings" element={<Navigate to="/settings/profile" replace />} />
         <Route path="/settings/*" element={<SettingsLayout />}>
           <Route path="profile" element={<SettingsProfile />} />
@@ -109,6 +112,7 @@ export const App = (): JSX.Element => (
           <Route path="ai" element={<SettingsAi />} />
           <Route path="webhooks" element={<SettingsWebhooks />} />
           <Route path="api-tokens" element={<SettingsApiTokens />} />
+          <Route path="sessions" element={<SettingsSessions />} />
           <Route path="security" element={<SettingsSecurity />} />
           <Route path="privacy" element={<SettingsPrivacy />} />
         </Route>

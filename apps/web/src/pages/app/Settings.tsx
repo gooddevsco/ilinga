@@ -25,6 +25,7 @@ const tabs = [
   { to: '/settings/ai', label: 'AI endpoints' },
   { to: '/settings/webhooks', label: 'Webhooks' },
   { to: '/settings/api-tokens', label: 'API tokens' },
+  { to: '/settings/sessions', label: 'Sessions' },
   { to: '/settings/security', label: 'Security' },
   { to: '/settings/privacy', label: 'Privacy' },
 ];
@@ -466,3 +467,4 @@ export { SettingsPrivacy } from './settings/Privacy';
 export { SettingsWebhooks } from './settings/Webhooks';
 export { SettingsApiTokens } from './settings/ApiTokens';
 export { SettingsWorkspace } from './settings/Workspace';
+export { SettingsSessions } from './settings/Sessions';
