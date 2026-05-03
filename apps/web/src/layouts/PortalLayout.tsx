@@ -2,44 +2,28 @@ import { useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { Sheet } from '@ilinga/ui';
 import { useAuth } from '../lib/auth';
-import { useMaintenance } from '../lib/maintenance';
 import { useTenant } from '../lib/tenant';
-import { BugReportWidget } from '../features/bug-report/BugReportWidget';
-import { useCommandPalette } from '../features/palette/CommandPalette';
+import { useMaintenance } from '../lib/maintenance';
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/ventures', label: 'Ventures' },
   { to: '/reports', label: 'Reports' },
-  { to: '/credits', label: 'Credits' },
-  { to: '/trash', label: 'Trash' },
-  { to: '/settings', label: 'Settings' },
 ];
 
+const isPortalHost = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  const host = window.location.host;
+  return host.startsWith('portal.') || host.includes('.portal.');
+};
+
 const Sidebar = ({ onNavigate }: { onNavigate?: () => void }): JSX.Element => {
-  const { tenants, current, setCurrent } = useTenant();
+  const { current } = useTenant();
   return (
     <div className="flex h-full flex-col p-4">
       <Link to="/dashboard" className="mb-4 block text-lg font-semibold">
-        Ilinga
+        {current?.displayName ?? 'Workspace'}
       </Link>
-      {tenants.length > 1 && current && (
-        <select
-          value={current.id}
-          onChange={(e) => {
-            const t = tenants.find((x) => x.id === e.target.value);
-            if (t) setCurrent(t);
-          }}
-          className="mb-4 h-9 rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-2 text-sm"
-          aria-label="Switch workspace"
-        >
-          {tenants.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.displayName}
-            </option>
-          ))}
-        </select>
-      )}
       <nav className="flex flex-col gap-1 text-sm">
         {navItems.map((item) => (
           <NavLink
@@ -58,19 +42,18 @@ const Sidebar = ({ onNavigate }: { onNavigate?: () => void }): JSX.Element => {
           </NavLink>
         ))}
       </nav>
-      <div className="mt-auto pt-4 text-xs text-[color:var(--color-fg-subtle)]">
-        {current ? <>Workspace: {current.displayName}</> : <>No workspace yet</>}
-      </div>
+      <p className="mt-auto pt-4 text-xs text-[color:var(--color-fg-subtle)]">
+        Portal access · Settings unavailable
+      </p>
     </div>
   );
 };
 
-export const AppLayout = (): JSX.Element => {
+export const PortalLayout = (): JSX.Element => {
   const { user, signOut, loading } = useAuth();
-  const { tenants, current, loading: tenantsLoading } = useTenant();
-  const maintenance = useMaintenance();
+  const { current, loading: tenantsLoading } = useTenant();
   const navigate = useNavigate();
-  const { toggle: paletteToggle } = useCommandPalette();
+  const maintenance = useMaintenance();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   if (loading || tenantsLoading) {
@@ -84,13 +67,19 @@ export const AppLayout = (): JSX.Element => {
     navigate('/sign-in', { replace: true });
     return <div />;
   }
-  if (tenants.length === 0 || !current) {
-    navigate('/onboarding/create-workspace', { replace: true });
-    return <div />;
+  if (!current) {
+    return (
+      <div className="mx-auto max-w-md py-16 text-center">
+        <h1 className="text-2xl font-semibold">No workspace</h1>
+        <p className="mt-3 text-sm text-[color:var(--color-fg-muted)]">
+          The portal address you used isn&apos;t bound to a workspace yet.
+        </p>
+      </div>
+    );
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col" data-portal-mode={isPortalHost() ? 'on' : 'off'}>
       {maintenance.active && (
         <div
           role="status"
@@ -117,27 +106,11 @@ export const AppLayout = (): JSX.Element => {
             >
               <span aria-hidden="true">☰</span>
             </button>
-            <Link to="/dashboard" className="text-base font-semibold md:hidden">
-              Ilinga
-            </Link>
-            <span className="hidden text-sm text-[color:var(--color-fg-muted)] md:inline">
-              Signed in as {user.userId.slice(0, 8)}…
-            </span>
-            <button
-              type="button"
-              onClick={() => paletteToggle()}
-              className="ml-auto inline-flex h-8 items-center gap-2 rounded-md border border-[color:var(--color-border)] px-3 text-xs text-[color:var(--color-fg-muted)]"
-              aria-label="Open command palette"
-            >
-              Search… <kbd className="font-mono">⌘K</kbd>
-            </button>
-            <Link to="/help" className="text-sm text-[color:var(--color-fg-muted)]">
-              Help
-            </Link>
+            <span className="text-sm text-[color:var(--color-fg-muted)]">Portal</span>
             <button
               type="button"
               onClick={() => void signOut()}
-              className="text-sm text-[color:var(--color-fg-muted)] hover:text-[color:var(--color-fg)]"
+              className="ml-auto text-sm text-[color:var(--color-fg-muted)]"
             >
               Sign out
             </button>
@@ -147,7 +120,8 @@ export const AppLayout = (): JSX.Element => {
           </main>
         </div>
       </div>
-      <BugReportWidget />
     </div>
   );
 };
+
+export const useIsPortal = (): boolean => isPortalHost();

@@ -7,6 +7,8 @@ import { ThemeProvider } from './lib/theme';
 import { ConsentProvider } from './lib/consent';
 import { AuthProvider } from './lib/auth';
 import { TenantProvider } from './lib/tenant';
+import { CommandPaletteProvider } from './features/palette/CommandPalette';
+import { BrowserRouter } from 'react-router-dom';
 
 const el = document.getElementById('root');
 if (!el) throw new Error('#root not found');
@@ -18,7 +20,11 @@ createRoot(el).render(
         <ToastProvider>
           <AuthProvider>
             <TenantProvider>
-              <App />
+              <BrowserRouter>
+                <CommandPaletteProvider>
+                  <App />
+                </CommandPaletteProvider>
+              </BrowserRouter>
             </TenantProvider>
           </AuthProvider>
         </ToastProvider>

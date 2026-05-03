@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import { MarketingLayout } from './layouts/MarketingLayout';
 import { AppLayout } from './layouts/AppLayout';
 import { Home } from './pages/marketing/Home';
@@ -20,6 +20,8 @@ import { VentureNew } from './pages/app/VentureNew';
 import { VentureDetail } from './pages/app/VentureDetail';
 import { VentureEdit } from './pages/app/VentureEdit';
 import { CycleCompare } from './pages/app/CycleCompare';
+import { Activity } from './pages/app/Activity';
+import { PortalLayout } from './layouts/PortalLayout';
 import { Interview } from './pages/app/Interview';
 import { Synthesis } from './pages/app/Synthesis';
 import { CycleReports } from './pages/app/CycleReports';
@@ -56,7 +58,7 @@ import {
 } from './pages/errors/ErrorPages';
 
 export const App = (): JSX.Element => (
-  <BrowserRouter>
+  <>
     <Routes>
       <Route element={<MarketingLayout />}>
         <Route path="/" element={<Home />} />
@@ -89,6 +91,7 @@ export const App = (): JSX.Element => (
         <Route path="/ventures/:id" element={<VentureDetail />} />
         <Route path="/ventures/:id/edit" element={<VentureEdit />} />
         <Route path="/ventures/:vid/compare" element={<CycleCompare />} />
+        <Route path="/ventures/:vid/cycles/:cid/activity" element={<Activity />} />
         <Route path="/ventures/:vid/cycles/:cid/interview" element={<Interview />} />
         <Route path="/ventures/:vid/cycles/:cid/synthesis" element={<Synthesis />} />
         <Route path="/ventures/:vid/cycles/:cid/reports" element={<CycleReports />} />
@@ -117,9 +120,19 @@ export const App = (): JSX.Element => (
         </Route>
       </Route>
 
+      <Route path="/portal" element={<PortalLayout />}>
+        <Route path="dashboard" element={<Dashboard />} />
+        <Route path="ventures" element={<Ventures />} />
+        <Route path="ventures/:id" element={<VentureDetail />} />
+        <Route path="ventures/:vid/cycles/:cid/interview" element={<Interview />} />
+        <Route path="ventures/:vid/cycles/:cid/synthesis" element={<Synthesis />} />
+        <Route path="ventures/:vid/cycles/:cid/reports" element={<CycleReports />} />
+        <Route path="reports/:id" element={<ReportViewer />} />
+      </Route>
+
       <Route element={<MarketingLayout />}>
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
-  </BrowserRouter>
+  </>
 );
