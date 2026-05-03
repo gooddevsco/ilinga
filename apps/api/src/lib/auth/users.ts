@@ -52,3 +52,25 @@ export const setUserEmail = async (userId: string, newEmail: string): Promise<vo
     .set({ email: newEmail, emailNormalized: normaliseEmail(newEmail), updatedAt: new Date() })
     .where(eq(schema.users.id, userId));
 };
+
+export const softDeleteUser = async (userId: string): Promise<void> => {
+  const db = getDb();
+  await db.transaction(async (tx) => {
+    await tx
+      .update(schema.users)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(eq(schema.users.id, userId));
+    await tx
+      .update(schema.userSessions)
+      .set({ revokedAt: new Date() })
+      .where(eq(schema.userSessions.userId, userId));
+    await tx.insert(schema.deletionTombstones).values({
+      tenantId: null,
+      targetTable: 'users',
+      targetId: userId,
+      deletedBy: userId,
+      restoreDeadline: new Date(Date.now() + 7 * 86_400_000),
+      payload: {},
+    });
+  });
+};

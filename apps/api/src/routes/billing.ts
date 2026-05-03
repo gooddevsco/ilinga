@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { schema, getDb } from '@ilinga/db';
 import { config } from '../config.js';
 import { requireAuth, requireCsrf, requireTenantMembership } from '../lib/guard.js';
@@ -98,6 +98,31 @@ billingRoutes.get(
 );
 
 billingRoutes.get(
+  '/tenant/:tid/subscription',
+  requireAuth,
+  requireCsrf,
+  requireTenantMembership('tid'),
+  async (c) => {
+    const rows = await getDb()
+      .select({
+        status: schema.subscriptions.status,
+        currentPeriodEnd: schema.subscriptions.currentPeriodEnd,
+        cancelAtPeriodEnd: schema.subscriptions.cancelAtPeriodEnd,
+        trialEndsAt: schema.subscriptions.trialEndsAt,
+      })
+      .from(schema.subscriptions)
+      .where(eq(schema.subscriptions.tenantId, c.req.param('tid')))
+      .limit(1);
+    return c.json({
+      status: rows[0]?.status ?? 'unknown',
+      currentPeriodEnd: rows[0]?.currentPeriodEnd ?? null,
+      cancelAtPeriodEnd: rows[0]?.cancelAtPeriodEnd ?? false,
+      trialEndsAt: rows[0]?.trialEndsAt ?? null,
+    });
+  },
+);
+
+billingRoutes.get(
   '/tenant/:tid/auto-topup',
   requireAuth,
   requireCsrf,
@@ -125,6 +150,55 @@ billingRoutes.get(
       .orderBy(desc(schema.invoices.issuedAt))
       .limit(100);
     return c.json({ invoices: rows });
+  },
+);
+
+const Redeem = z.object({ code: z.string().min(2).max(64) });
+
+billingRoutes.post(
+  '/tenant/:tid/coupons/redeem',
+  requireAuth,
+  requireCsrf,
+  requireTenantMembership('tid'),
+  async (c) => {
+    const body = Redeem.safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success) throw badRequest('invalid body');
+    const tenantId = c.req.param('tid');
+    const db = getDb();
+    const coupons = await db
+      .select()
+      .from(schema.coupons)
+      .where(eq(schema.coupons.code, body.data.code))
+      .limit(1);
+    const coupon = coupons[0];
+    if (!coupon) throw notFound('coupon');
+    if (coupon.expiresAt && coupon.expiresAt < new Date()) throw badRequest('coupon expired');
+    if (coupon.maxRedemptions !== null && coupon.redeemed >= coupon.maxRedemptions)
+      throw badRequest('coupon exhausted');
+    const dup = await db
+      .select()
+      .from(schema.couponRedemptions)
+      .where(
+        and(
+          eq(schema.couponRedemptions.tenantId, tenantId),
+          eq(schema.couponRedemptions.couponId, coupon.id),
+        ),
+      )
+      .limit(1);
+    if (dup[0]) throw badRequest('already redeemed');
+    await db.transaction(async (tx) => {
+      await tx.insert(schema.couponRedemptions).values({ tenantId, couponId: coupon.id });
+      await tx
+        .update(schema.coupons)
+        .set({ redeemed: coupon.redeemed + 1 })
+        .where(eq(schema.coupons.id, coupon.id));
+    });
+    return c.json({
+      ok: true,
+      percentOff: coupon.percentOff,
+      amountOffCents: coupon.amountOffCents,
+      durationMonths: coupon.durationMonths,
+    });
   },
 );
 

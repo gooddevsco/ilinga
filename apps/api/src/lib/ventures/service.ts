@@ -90,6 +90,68 @@ export const cloneCycle = async (
     })
     .returning({ id: schema.ventureCycles.id, seq: schema.ventureCycles.seq });
   if (!created) throw new Error('clone failed');
+
+  // Copy interview answers + competitors + artifact references so the new
+  // cycle starts from the previous one's state. Content keys deliberately
+  // are NOT copied — synthesis on the new cycle should produce them fresh.
+  await db.transaction(async (tx) => {
+    const answers = await tx
+      .select()
+      .from(schema.questionAnswers)
+      .where(eq(schema.questionAnswers.cycleId, cycleId));
+    if (answers.length > 0) {
+      await tx.insert(schema.questionAnswers).values(
+        answers.map((a) => ({
+          tenantId,
+          cycleId: created.id,
+          questionId: a.questionId,
+          answeredBy: userId,
+          rawValue: a.rawValue,
+          notes: a.notes,
+          version: 1,
+        })),
+      );
+    }
+    const competitors = await tx
+      .select()
+      .from(schema.competitors)
+      .where(eq(schema.competitors.cycleId, cycleId));
+    if (competitors.length > 0) {
+      await tx.insert(schema.competitors).values(
+        competitors.map((co) => ({
+          tenantId,
+          cycleId: created.id,
+          url: co.url,
+          label: co.label,
+          scrapeStatus: 'queued',
+          addedBy: userId,
+        })),
+      );
+    }
+    const artifacts = await tx
+      .select()
+      .from(schema.ventureArtifacts)
+      .where(eq(schema.ventureArtifacts.cycleId, cycleId));
+    if (artifacts.length > 0) {
+      // Reference the same S3 objects in the new cycle's row set; the
+      // file is owned by the tenant, not the cycle, so this is safe.
+      await tx.insert(schema.ventureArtifacts).values(
+        artifacts.map((a) => ({
+          tenantId,
+          cycleId: created.id,
+          kind: a.kind,
+          fileName: a.fileName,
+          mimeType: a.mimeType,
+          sizeBytes: a.sizeBytes,
+          s3Key: a.s3Key,
+          extractionStatus: a.extractionStatus,
+          extractionText: a.extractionText,
+          uploadedBy: userId,
+        })),
+      );
+    }
+  });
+
   return created;
 };
 

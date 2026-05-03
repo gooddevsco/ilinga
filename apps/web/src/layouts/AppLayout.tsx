@@ -6,6 +6,7 @@ import { useMaintenance } from '../lib/maintenance';
 import { useTenant } from '../lib/tenant';
 import { BugReportWidget } from '../features/bug-report/BugReportWidget';
 import { useCommandPalette } from '../features/palette/CommandPalette';
+import { useSubscriptionStatus } from '../lib/subscription';
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard' },
@@ -71,6 +72,7 @@ export const AppLayout = (): JSX.Element => {
   const maintenance = useMaintenance();
   const navigate = useNavigate();
   const { toggle: paletteToggle } = useCommandPalette();
+  const subscription = useSubscriptionStatus();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   if (loading || tenantsLoading) {
@@ -98,6 +100,16 @@ export const AppLayout = (): JSX.Element => {
           className="bg-[color:var(--color-warning)]/10 px-4 py-2 text-center text-sm text-[color:var(--color-warning)]"
         >
           {maintenance.message}
+        </div>
+      )}
+      {subscription.isReadOnly && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="bg-[color:var(--color-danger)]/10 px-4 py-2 text-center text-sm text-[color:var(--color-danger)]"
+        >
+          Workspace is read-only ({subscription.status}). Update billing in Settings → Billing to
+          restore writes.
         </div>
       )}
       <div className="flex flex-1">

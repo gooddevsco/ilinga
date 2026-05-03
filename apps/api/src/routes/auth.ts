@@ -5,7 +5,7 @@ import { setCookie, getCookie, deleteCookie } from 'hono/cookie';
 import { config } from '../config.js';
 import { sendTracked } from '../lib/mailer.js';
 import { issueMagicLink, consumeMagicLink, type MagicLinkPurpose } from '../lib/auth/magic-link.js';
-import { setUserEmail, upsertUser } from '../lib/auth/users.js';
+import { setUserEmail, softDeleteUser, upsertUser } from '../lib/auth/users.js';
 import { getMembership } from '../lib/tenants/service.js';
 import { schema, getDb } from '@ilinga/db';
 import { createSession, resolveSession, revokeSession } from '../lib/auth/sessions.js';
@@ -219,4 +219,14 @@ authRoutes.get('/me', async (c) => {
 authRoutes.get('/csrf', (c) => {
   const existing = getCookie(c, CSRF_COOKIE);
   return c.json({ csrf: existing ?? null });
+});
+
+authRoutes.delete('/account', async (c) => {
+  const raw = readSession(c);
+  if (!raw) throw unauthorized();
+  const sess = await resolveSession(raw);
+  if (!sess) throw unauthorized();
+  await softDeleteUser(sess.userId);
+  clearAuthCookies(c);
+  return c.json({ ok: true, hardDeletesIn: '7d' });
 });

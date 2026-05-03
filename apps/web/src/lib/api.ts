@@ -4,7 +4,24 @@ export const baseUrl =
 export interface ApiError extends Error {
   status: number;
   body?: unknown;
+  /** Best-effort human title from a problem+json response. */
+  detail?: string;
+  /** field -> first-error message; populated from zod issues when present. */
+  fieldErrors?: Record<string, string>;
 }
+
+const extractFieldErrors = (body: unknown): Record<string, string> | undefined => {
+  if (!body || typeof body !== 'object') return undefined;
+  const errs = (body as { errors?: unknown }).errors;
+  if (!errs || typeof errs !== 'object') return undefined;
+  const out: Record<string, string> = {};
+  // zod-style: { fieldErrors: { name: ['too short'] } }
+  const fe = (errs as { fieldErrors?: Record<string, string[]> }).fieldErrors;
+  if (fe) {
+    for (const [k, v] of Object.entries(fe)) if (v[0]) out[k] = v[0];
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+};
 
 const headers = (init?: HeadersInit): HeadersInit => {
   const csrf = document.cookie
@@ -74,6 +91,9 @@ const throwApiError = async (res: Response): Promise<never> => {
   err.status = res.status;
   try {
     err.body = await res.json();
+    const body = err.body as { title?: string; detail?: string };
+    err.detail = body?.detail ?? body?.title;
+    err.fieldErrors = extractFieldErrors(err.body);
   } catch {
     /* ignore */
   }

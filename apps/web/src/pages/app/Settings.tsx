@@ -67,6 +67,7 @@ export const SettingsProfile = (): JSX.Element => {
       await api.post('/v1/auth/magic-link/request', {
         email: newEmail,
         purpose: 'email_change_verify',
+        metadata: { newEmail, userId: user.userId },
       });
       toast.push({
         variant: 'success',
@@ -125,13 +126,20 @@ export const SettingsProfile = (): JSX.Element => {
             </Button>
             <Button
               variant="danger"
-              onClick={() => {
-                toast.push({
-                  variant: 'info',
-                  title: 'Self-delete request received',
-                  body: 'You will receive a confirmation email; the account is removed after 7 days.',
-                });
-                setConfirmDelete(false);
+              onClick={async () => {
+                try {
+                  await api.delete('/v1/auth/account');
+                  toast.push({
+                    variant: 'info',
+                    title: 'Account deleted',
+                    body: 'Hard-delete in 7 days. Sign in within that window to cancel.',
+                  });
+                  window.location.assign('/');
+                } catch {
+                  toast.push({ variant: 'error', title: 'Delete failed' });
+                } finally {
+                  setConfirmDelete(false);
+                }
               }}
             >
               Confirm delete

@@ -175,3 +175,37 @@ reportRoutes.delete('/tenant/:tid/schedules/:sid', requireTenantMembership('tid'
     );
   return c.json({ ok: true });
 });
+
+reportRoutes.post(
+  '/tenant/:tid/schedules/:sid/pause',
+  requireTenantMembership('tid'),
+  async (c) => {
+    await getDb()
+      .update(schema.reportSchedules)
+      .set({ pausedAt: new Date() })
+      .where(
+        and(
+          eq(schema.reportSchedules.id, c.req.param('sid')),
+          eq(schema.reportSchedules.tenantId, c.req.param('tid')),
+        ),
+      );
+    return c.json({ ok: true });
+  },
+);
+
+reportRoutes.post(
+  '/tenant/:tid/schedules/:sid/resume',
+  requireTenantMembership('tid'),
+  async (c) => {
+    await getDb()
+      .update(schema.reportSchedules)
+      .set({ pausedAt: null })
+      .where(
+        and(
+          eq(schema.reportSchedules.id, c.req.param('sid')),
+          eq(schema.reportSchedules.tenantId, c.req.param('tid')),
+        ),
+      );
+    return c.json({ ok: true });
+  },
+);
