@@ -10,9 +10,7 @@ const Schema = z.object({
   IL_WEB_ORIGIN: z.string().default('http://localhost:5173'),
   IL_API_ORIGIN: z.string().default('http://localhost:3001'),
   IL_COOKIE_DOMAIN: z.string().default('localhost'),
-  IL_LOG_LEVEL: z
-    .enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal'])
-    .default('info'),
+  IL_LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
   IL_REQUEST_ID_HEADER: z.string().default('X-Request-Id'),
   IL_SESSION_TTL_HOURS: z.coerce.number().default(24),
   IL_DEVICE_TRUST_DAYS: z.coerce.number().default(30),
@@ -28,6 +26,12 @@ const Schema = z.object({
   GOOGLE_OAUTH_REDIRECT: z.string().default(''),
   HCAPTCHA_SECRET: z.string().default(''),
   IL_MAINTENANCE_BANNER: z.string().default(''),
+  IL_S3_ENDPOINT: z.string().default('http://localhost:9000'),
+  IL_S3_REGION: z.string().default('auto'),
+  IL_S3_BUCKET: z.string().default('ilinga-eu'),
+  IL_S3_ACCESS_KEY: z.string().default('ilinga'),
+  IL_S3_SECRET_KEY: z.string().default('ilinga-dev-secret'),
+  IL_S3_FORCE_PATH_STYLE: z.enum(['true', 'false']).default('true'),
 });
 
 export type Config = z.infer<typeof Schema>;

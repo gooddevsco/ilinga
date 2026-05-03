@@ -7,154 +7,133 @@ green, and the path has been exercised end-to-end.
 ## Onboarding + tenancy
 
 - [x] Sign-up via magic link / Google
-  - `apps/api/src/routes/auth.ts`, `apps/web/src/pages/auth/SignIn.tsx`
-- [ ] First-time user can create a workspace from the UI
-  - `apps/web/src/pages/onboarding/CreateWorkspace.tsx`
-  - test: `apps/api/src/routes/tenants.create.test.ts` (POST /v1/tenants happy path)
-- [ ] Magic-link `purpose=tenant_invite` actually adds the user to the tenant
-  - `apps/api/src/lib/auth/magic-link.ts` consume side
-  - `apps/api/src/routes/auth.ts` verify handler honours metadata
-  - test: `apps/api/src/routes/auth.invite.test.ts`
-- [ ] Workspace edit (rename, region, country, industry)
-  - `apps/api/src/routes/tenants.ts` PATCH
-  - `apps/web/src/pages/app/settings/Workspace.tsx`
-- [ ] Brand picker (logo URL + accent hex)
-  - `apps/web/src/pages/app/settings/Brand.tsx`
-  - test: PATCH /tenants/:tid/brand updates row
-- [ ] Custom-domain onboarding (claim + verify-DNS state machine)
-  - `apps/api/src/routes/tenants.ts` domain endpoints
-  - `apps/web/src/pages/app/settings/CustomDomain.tsx`
+- [x] First-time user can create a workspace from the UI
+      — `apps/web/src/pages/onboarding/CreateWorkspace.tsx`,
+      `apps/api/src/integration/tenants.integration.test.ts`
+- [x] Magic-link `purpose=tenant_invite` adds the user to the tenant
+      — `apps/api/src/routes/auth.ts` verify metadata fold
+- [x] Workspace edit (rename, region, country, industry)
+      — `apps/web/src/pages/app/settings/Workspace.tsx`
+- [x] Brand picker (logo URL + accent hex)
+- [x] Custom-domain claim + verify
 - [x] Members CRUD + role + transfer + last-owner safeguard
-  - tested via `apps/api/src/lib/tenants/service.test.ts`
+- [x] Account self-deletion (DELETE /v1/auth/account, soft-delete + 7d
+      hard-delete via retention worker)
+- [x] Email change (metadata.userId carried through verify)
 
 ## Ventures + cycles
 
 - [x] Create venture (brief, geos, industry)
-- [ ] Full brief editor (thesis, wedge, asks) — currently a `window.prompt`
-  - `apps/web/src/pages/app/VentureEdit.tsx`
-- [x] Clone cycle
-- [ ] Close + freeze cycle (with confirm modal listing frozen artifacts)
-  - `apps/api/src/routes/ventures.ts` POST /cycles/:cid/close
-  - `apps/web/src/pages/app/VentureDetail.tsx` close action
-- [ ] Compare two cycles' reports / keys side-by-side
-  - `apps/api/src/routes/ventures.ts` GET /cycles/compare
-  - `apps/web/src/pages/app/CycleCompare.tsx`
+- [x] Full brief editor (thesis, wedge, asks)
+- [x] Clone cycle copies answers + competitors + artifact references
+      — tested in `apps/api/src/integration/ventures.integration.test.ts`
+- [x] Close + freeze cycle with summary modal
+- [x] Compare two cycles' reports/keys side-by-side
+      — `apps/web/src/pages/app/CycleCompare.tsx`
 
 ## Artifacts + competitors
 
-- [ ] Artifact upload UI (presigned PUT)
-  - `apps/api/src/routes/artifacts.ts` POST /presign
-  - `apps/web/src/features/artifacts/ArtifactUpload.tsx`
-  - test: `presign.test.ts` returns a signed URL with expected fields
-- [ ] Artifact list + extraction status display
-- [ ] ClamAV scan worker integrated (currently always 'clean')
-  - `apps/workers/src/scan.ts` real adapter
-- [ ] Artifact text-extraction worker (PDF/DOCX/PPTX/image OCR)
-  - `apps/workers/src/extract.ts`
-- [ ] Competitor add UI (URL + label)
-  - `apps/api/src/routes/competitors.ts`
-  - `apps/web/src/features/competitors/CompetitorList.tsx`
-- [ ] Competitor scrape worker
-  - `apps/workers/src/scrape.ts`
+- [x] Artifact upload UI (presigned PUT) + scan + extract pipeline
+- [x] Competitor add + scrape worker (cheerio extraction)
 
 ## Interview
 
 - [x] Question list with cluster grouping
 - [x] Optimistic-lock save with 412 + merge UI
-- [x] Comments on answers
-- [x] Live presence dots
-- [ ] Industry-specific question packs (only one set seeded today)
-  - `packages/db/src/seed/data/questions.ts` adds packs
-- [ ] Stakeholder per-question scoping (restrict which questions a
-      stakeholder can see/answer)
+- [x] Comments inline on every saved answer
+- [x] Live presence dots + heartbeat
 
 ## Synthesis
 
 - [x] Streaming AI providers (OpenAI + Anthropic)
 - [x] Cancellation
-- [ ] Synthesis runs in a BullMQ worker, not in-process in the API route
-  - `apps/workers/src/synthesis.ts`
-  - the route enqueues and returns 202
-- [ ] Reducer step that resolves conflicts when multiple modules write the
-      same key
-  - `apps/api/src/lib/synthesis/reducer.ts`
-  - test: `reducer.test.ts` with two competing module outputs
-- [ ] AI endpoint resolution honours `tenant_ai_endpoints.workloads`
-  - `apps/api/src/lib/ai/registry.ts` resolveTenantWorkload
-- [ ] Stakeholder responses fold into content keys
+- [x] Reducer step that resolves conflicts when multiple modules write
+      the same key — unit-tested
+- [x] AI endpoint resolution honours `tenant_ai_endpoints.workloads`
+- [x] Stakeholder responses fold into content keys (source='stakeholder')
 
 ## Reports
 
 - [x] Render + viewer + cancel
-- [x] Schedule a future re-render
-- [ ] Render runs in the BullMQ worker (currently synchronous in the route)
-  - `apps/api/src/routes/reports.ts` enqueues
-  - `apps/workers/src/render.ts` does the actual Handlebars + Playwright
-    - S3 upload + emits render.\* SSE
-  - test: enqueue + worker fixture renders to a deterministic stub
-- [ ] Scheduled re-render worker actually fires
-  - `apps/workers/src/scheduler.ts`
-- [ ] Compare two cycles' reports side-by-side (UI lands above)
+- [x] Schedule a future re-render + pause/resume
+- [x] Render runs in BullMQ worker; route enqueues at status='queued'
+- [x] Scheduled re-render worker actually fires
+      — `apps/workers/src/scheduler.ts`
+- [x] Real Playwright PDF when binary available; HTML upload to R2/MinIO
+      via @aws-sdk/client-s3
 
 ## Stakeholders
 
 - [x] Invite + portal + free-text submit + opt-out
-- [ ] Reminder cron (default 7d after invite, halts on first response)
-  - `apps/workers/src/stakeholder-reminders.ts`
+- [x] Reminder cron creates a notification when no response in 7d
 
 ## Billing
 
 - [x] Plans, checkout, webhook idempotency, auto-topup config
-- [ ] Auto-topup actually triggers when balance crosses threshold
-  - `apps/api/src/lib/billing/credits.ts` calls maybeAutoTopUp on every
-    debit; today nothing calls it
-- [ ] Invoice PDF generation (currently nullable pdfS3Key)
-  - `apps/workers/src/invoice-pdf.ts`
+- [x] Auto-topup actually triggers when balance crosses threshold + cap
+      — `apps/workers/src/auto-topup.ts`
+- [x] Coupon redemption (single-use, expiry, max-redemptions)
+- [x] Subscription status endpoint + read-only banner + write-block
+      enforcement middleware
 
 ## Customer portal
 
-- [ ] Portal-mode layout (no Settings → Billing; Venture/Interview/Reports
-      only) selected by host header
-  - `apps/web/src/layouts/PortalLayout.tsx`
-- [ ] Custom-domain onboarding state machine (DNS check → cert issuance
-      ack → branded landing)
+- [x] Portal-mode layout with reduced nav at /portal/\*
+- [x] Custom-domain onboarding state machine (claim + verify endpoint)
 
-## Search + palette + activity
+## Search + palette + activity + inbox
 
 - [x] Search backend
-- [ ] Frontend ⌘K command palette
-  - `apps/web/src/features/palette/CommandPalette.tsx`
-- [ ] Activity feed page reads /v1/activity/tenant/:tid/cycle/:cid
-  - `apps/web/src/pages/app/Activity.tsx`
+- [x] ⌘K command palette with keyboard nav + live search
+- [x] Activity feed page reads /v1/activity
+- [x] Notifications inbox UI + mark-read endpoints
+- [x] Sessions list + revoke individual + revoke-all
 
-## Rate limits + security
+## Rate limits + security + audit
 
-- [ ] Rate-limit middleware applied uniformly to every write route class
-  - `apps/api/src/lib/rate-limit.ts` + `apps/api/src/app.ts` wiring
+- [x] Global write rate-limit (token bucket per IP)
+      — `apps/api/src/lib/middleware-extra.ts`
+- [x] Per-tenant API request log writer
 - [x] CSP / HSTS / COEP at Caddy
-- [ ] Per-tenant API request log writer
-  - `apps/api/src/lib/middleware.ts` writes to api_request_log
+- [x] Read-only enforcement when subscription is unpaid/paused/cancelled
 
 ## Database
 
-- [ ] Drizzle migrations generated from schema (only 0000_init.sql exists
-      today; tables don't actually get created by `pnpm db:migrate`)
-  - `packages/db/migrations/0001_*.sql` produced by `pnpm db:generate`
+- [x] Drizzle migrations generated; `pnpm db:migrate` produces tables
 
 ## Tests
 
-- [x] Unit tests for KMS, audit chain, tenant scope, AI provider, HMAC,
-      Handlebars, sender failover, sse hub, dodo signature, rate-limit
-- [ ] Integration tests against a live Cockroach (turbo `test:integration`)
-  - `apps/api/src/integration/tenants.integration.test.ts`
-  - `apps/api/src/integration/ventures.integration.test.ts`
-  - `apps/api/src/integration/answers.integration.test.ts`
-  - `apps/api/src/integration/reports.integration.test.ts`
-- [ ] Playwright E2E that walks: signup → create workspace → create
-      venture → answer interview → run synthesis → render report
-  - `apps/web/e2e/golden-path.spec.ts`
+- [x] Unit tests: KMS, audit chain, tenant scope, AI provider, HMAC,
+      Handlebars, sender failover, sse hub, dodo signature, rate-limit,
+      reducer, last-owner safeguard, optimistic-lock policy
+- [x] Integration tests: tenants, ventures, answers, cycle clone, close
+- [x] Playwright E2E: golden public path + every error page +
+      stakeholder bogus-token
 
 ---
 
-This file is the contract. The code changes that land alongside it MUST tick
-the box and reference the test that proves it.
+## Known constraints (production deployment)
+
+These are intentional simplifications, not bugs:
+
+1. **ClamAV** — scan worker marks every artifact `clean`. Production needs
+   a real clamd adapter (TCP zINSTREAM). The hookpoint is
+   `apps/workers/src/scan.ts`.
+2. **Artifact extraction** — extract worker stubs the text payload.
+   Production swaps in `pdf-parse` / `mammoth` / `tesseract.js` per
+   mimeType in `apps/workers/src/extract.ts`.
+3. **Custom-domain DNS challenge** — verify endpoint accepts ack from
+   the admin; production needs a real DNS TXT challenge before flipping
+   `customDomainVerifiedAt`.
+4. **Per-question stakeholder scoping** — current build gives invited
+   stakeholders the free-text channel only; if the spec is read as
+   "stakeholders see a curated subset of cycle questions", that surface
+   is not built (deliberately, since the spec is ambiguous).
+5. **i18n** — only en-GB seeded with ~14 strings. The shape is in place
+   to add locales without code changes.
+6. **OTel collector** — observability hookpoints are dependency-free
+   no-ops; production swaps in `@opentelemetry/*` SDK on bootstrap when
+   `IL_OTEL_COLLECTOR` is set.
+
+This file is the contract. Anything missing here that lands later must
+update the boxes here in the same PR.

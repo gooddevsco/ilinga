@@ -10,12 +10,12 @@ const client = (): S3Client => {
   const cfg = config();
   cachedClient = new S3Client({
     endpoint: cfg.IL_S3_ENDPOINT,
-    region: process.env.IL_S3_REGION ?? 'auto',
+    region: cfg.IL_S3_REGION,
     credentials: {
-      accessKeyId: process.env.IL_S3_ACCESS_KEY ?? 'mock',
-      secretAccessKey: process.env.IL_S3_SECRET_KEY ?? 'mock',
+      accessKeyId: cfg.IL_S3_ACCESS_KEY,
+      secretAccessKey: cfg.IL_S3_SECRET_KEY,
     },
-    forcePathStyle: process.env.IL_S3_FORCE_PATH_STYLE === 'true',
+    forcePathStyle: cfg.IL_S3_FORCE_PATH_STYLE === 'true',
   });
   return cachedClient;
 };
@@ -25,21 +25,16 @@ export const presignPut = async (
   contentType: string,
   expiresInSeconds = 600,
 ): Promise<{ url: string; key: string }> => {
-  const cfg = config();
   const cmd = new PutObjectCommand({
-    Bucket: process.env.IL_S3_BUCKET ?? 'ilinga-eu',
+    Bucket: config().IL_S3_BUCKET,
     Key: key,
     ContentType: contentType,
   });
   const url = await getSignedUrl(client(), cmd, { expiresIn: expiresInSeconds });
-  void cfg;
   return { url, key };
 };
 
 export const presignGet = async (key: string, expiresInSeconds = 600): Promise<string> => {
-  const cmd = new GetObjectCommand({
-    Bucket: process.env.IL_S3_BUCKET ?? 'ilinga-eu',
-    Key: key,
-  });
+  const cmd = new GetObjectCommand({ Bucket: config().IL_S3_BUCKET, Key: key });
   return getSignedUrl(client(), cmd, { expiresIn: expiresInSeconds });
 };
