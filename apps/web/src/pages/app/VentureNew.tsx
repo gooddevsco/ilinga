@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Field, Input, useToast } from '@ilinga/ui';
-import { api, type ApiError } from '../../lib/api';
+import { api } from '../../lib/api';
+import { overallError } from '../../lib/zod-error';
 import { useTenant } from '../../lib/tenant';
 
 export const VentureNew = (): JSX.Element => {
@@ -15,9 +16,7 @@ export const VentureNew = (): JSX.Element => {
   const toast = useToast();
 
   if (!current) {
-    return (
-      <p className="text-sm text-[color:var(--color-fg-muted)]">No workspace selected.</p>
-    );
+    return <p className="text-sm text-[color:var(--color-fg-muted)]">No workspace selected.</p>;
   }
 
   const submit = async (e: React.FormEvent): Promise<void> => {
@@ -40,7 +39,7 @@ export const VentureNew = (): JSX.Element => {
       toast.push({
         variant: 'error',
         title: 'Could not create venture',
-        body: `Status ${(err as ApiError).status}.`,
+        body: overallError(err),
       });
     } finally {
       setSubmitting(false);
@@ -67,7 +66,11 @@ export const VentureNew = (): JSX.Element => {
           placeholder="logistics"
         />
       </Field>
-      <Field label="Geos" htmlFor="vgeos" hint="Comma-separated ISO-3166-1 alpha-2 codes (e.g. DE, FR, NL).">
+      <Field
+        label="Geos"
+        htmlFor="vgeos"
+        hint="Comma-separated ISO-3166-1 alpha-2 codes (e.g. DE, FR, NL)."
+      >
         <Input
           id="vgeos"
           value={geos}
@@ -89,11 +92,7 @@ export const VentureNew = (): JSX.Element => {
         <Button type="submit" loading={submitting}>
           Create venture
         </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => navigate('/ventures')}
-        >
+        <Button type="button" variant="secondary" onClick={() => navigate('/ventures')}>
           Cancel
         </Button>
       </div>

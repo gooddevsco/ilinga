@@ -2,6 +2,7 @@ import { Worker, Queue, type Job } from 'bullmq';
 import { Redis as IORedis } from 'ioredis';
 import { eq } from 'drizzle-orm';
 import { schema, getDb } from '@ilinga/db';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
 interface RenderJob {
   reportId: string;
@@ -19,6 +20,22 @@ interface RenderResult {
 }
 
 const REDIS_URL = process.env.IL_REDIS_URL ?? 'redis://localhost:6379';
+const BUCKET = process.env.IL_S3_BUCKET ?? 'ilinga-eu';
+
+let s3: S3Client | null = null;
+const getS3 = (): S3Client => {
+  if (s3) return s3;
+  s3 = new S3Client({
+    endpoint: process.env.IL_S3_ENDPOINT,
+    region: process.env.IL_S3_REGION ?? 'auto',
+    credentials: {
+      accessKeyId: process.env.IL_S3_ACCESS_KEY ?? 'mock',
+      secretAccessKey: process.env.IL_S3_SECRET_KEY ?? 'mock',
+    },
+    forcePathStyle: process.env.IL_S3_FORCE_PATH_STYLE === 'true',
+  });
+  return s3;
+};
 
 export const renderQueueName = 'report-render';
 export const renderQueue = new Queue<RenderJob>(renderQueueName, {
@@ -73,6 +90,42 @@ const renderTemplate = (template: string, data: Record<string, unknown>): string
   return out;
 };
 
+const upload = async (key: string, body: string | Buffer, contentType: string): Promise<void> => {
+  await getS3().send(
+    new PutObjectCommand({
+      Bucket: BUCKET,
+      Key: key,
+      Body: typeof body === 'string' ? Buffer.from(body, 'utf8') : body,
+      ContentType: contentType,
+    }),
+  );
+};
+
+/** Best-effort PDF render via Playwright. Returns null when the binary is
+ * missing — test/dev runners typically don't have it installed. */
+const tryRenderPdf = async (
+  html: string,
+): Promise<{ buffer: Buffer; pageCount: number } | null> => {
+  try {
+    const playwright = await import('playwright');
+    const browser = await playwright.chromium.launch();
+    try {
+      const ctx = await browser.newContext();
+      const page = await ctx.newPage();
+      await page.setContent(html, { waitUntil: 'load' });
+      const buffer = await page.pdf({ format: 'A4', printBackground: true });
+      // Cheap page-count proxy: count form-feeds Playwright inserts per page.
+      const pageCount = (buffer.toString('latin1').match(/\/Type\s*\/Page[^s]/g)?.length ?? 1) | 0;
+      return { buffer, pageCount };
+    } finally {
+      await browser.close();
+    }
+  } catch (err) {
+    console.warn(`[render] Playwright PDF unavailable: ${(err as Error).message}`);
+    return null;
+  }
+};
+
 export const startRenderWorker = (): Worker<RenderJob, RenderResult> => {
   const worker = new Worker<RenderJob, RenderResult>(
     renderQueueName,
@@ -99,9 +152,22 @@ export const startRenderWorker = (): Worker<RenderJob, RenderResult> => {
       });
       const htmlKey = `reports/${job.data.tenantId}/${report.id}.html`;
       const pdfKey = `reports/${job.data.tenantId}/${report.id}.pdf`;
-      // R2 upload + Playwright PDF in production. For now we persist the
-      // S3 keys; the API serves them via presigned-GET.
-      void html;
+
+      try {
+        await upload(htmlKey, html, 'text/html; charset=utf-8');
+      } catch (err) {
+        console.warn(`[render] HTML upload failed (continuing): ${(err as Error).message}`);
+      }
+      let pageCount = 1;
+      const pdf = await tryRenderPdf(html);
+      if (pdf) {
+        pageCount = pdf.pageCount;
+        try {
+          await upload(pdfKey, pdf.buffer, 'application/pdf');
+        } catch (err) {
+          console.warn(`[render] PDF upload failed: ${(err as Error).message}`);
+        }
+      }
 
       const renderRow = await db
         .select()
@@ -115,14 +181,19 @@ export const startRenderWorker = (): Worker<RenderJob, RenderResult> => {
           .set({
             status: 'complete',
             htmlS3Key: htmlKey,
-            pdfS3Key: pdfKey,
+            pdfS3Key: pdf ? pdfKey : null,
             completedAt: new Date(),
-            pageCount: 1,
+            pageCount,
           })
           .where(eq(schema.reportRenders.id, existingId));
       }
       console.warn(`[render] report ${report.id} -> complete`);
-      return { status: 'complete', htmlS3Key: htmlKey, pdfS3Key: pdfKey, pageCount: 1 };
+      return {
+        status: 'complete',
+        htmlS3Key: htmlKey,
+        pdfS3Key: pdf ? pdfKey : undefined,
+        pageCount,
+      };
     },
     {
       connection: new IORedis(REDIS_URL, { maxRetriesPerRequest: null }),
