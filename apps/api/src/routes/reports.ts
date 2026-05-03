@@ -3,14 +3,9 @@ import { z } from 'zod';
 import { and, eq } from 'drizzle-orm';
 import { schema, getDb } from '@ilinga/db';
 import { requireAuth, requireCsrf, requireTenantMembership } from '../lib/guard.js';
-import { renderTemplate } from '../lib/reports/handlebars.js';
-import {
-  buildSnapshotForCycle,
-  createReport,
-  findReusableRender,
-  listReports,
-} from '../lib/reports/service.js';
+import { createReport, findReusableRender, listReports } from '../lib/reports/service.js';
 import { badRequest, notFound } from '../lib/problem.js';
+import { renderQueue } from '../lib/queues.js';
 
 export const reportRoutes = new Hono();
 reportRoutes.use('*', requireAuth);
@@ -67,27 +62,29 @@ reportRoutes.post('/tenant/:tid/render', requireTenantMembership('tid'), async (
     }
   }
 
-  const snapshot = await buildSnapshotForCycle(tenantId, body.data.cycleId);
-  const html = renderTemplate(tpl.handlebarsHtml, { venture: { name: 'Venture' }, ...snapshot });
-  const htmlKey = `reports/${tenantId}/${report.id}.html`;
-  const pdfKey = `reports/${tenantId}/${report.id}.pdf`;
-  // Synchronous "render" in Phase 8 (Playwright launched by the worker app
-  // in production; here we just persist the HTML reference).
-  void html;
-
+  // Enqueue the render. The worker will produce the HTML, run Playwright
+  // for the PDF, upload to R2, and update the row.
   const [render] = await db
     .insert(schema.reportRenders)
     .values({
       tenantId,
       reportId: report.id,
-      status: 'complete',
-      htmlS3Key: htmlKey,
-      pdfS3Key: pdfKey,
+      status: 'queued',
       creditsCharged: tpl.creditCost,
       forced: !!body.data.forced,
-      completedAt: new Date(),
     })
     .returning();
+  await renderQueue.add(
+    'render',
+    {
+      reportId: report.id,
+      tenantId,
+      templateId: tpl.id,
+      forced: !!body.data.forced,
+      briefName: body.data.title ?? tpl.displayName,
+    },
+    { jobId: `render-${report.id}-${Date.now()}` },
+  );
 
   return c.json({ reportId: report.id, renderId: render!.id, creditsCharged: tpl.creditCost });
 });

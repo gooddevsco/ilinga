@@ -3,6 +3,6 @@ import { phase } from './index.js';
 
 describe('workers stub', () => {
   it('loads', () => {
-    expect(phase).toBe(17);
+    expect(phase).toBe(18);
   });
 });
