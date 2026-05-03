@@ -28,6 +28,8 @@ import { commentRoutes } from './routes/comments.js';
 import { activityRoutes } from './routes/activity.js';
 import { trashRoutes } from './routes/trash.js';
 import { contentKeyRoutes } from './routes/content-keys.js';
+import { artifactRoutes } from './routes/artifacts.js';
+import { competitorRoutes } from './routes/competitors.js';
 
 export const buildApp = () => {
   const cfg = config();
@@ -74,6 +76,8 @@ export const buildApp = () => {
   app.route('/v1/activity', activityRoutes);
   app.route('/v1/trash', trashRoutes);
   app.route('/v1/content-keys', contentKeyRoutes);
+  app.route('/v1/artifacts', artifactRoutes);
+  app.route('/v1/competitors', competitorRoutes);
 
   app.notFound((c) =>
     c.json({ type: 'about:blank', title: 'Not Found', status: 404 }, 404, {

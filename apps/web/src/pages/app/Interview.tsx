@@ -6,6 +6,8 @@ import { useTenant } from '../../lib/tenant';
 import { Comments } from '../../features/comments/Comments';
 import { PresenceDots } from '../../features/synthesis/PresenceDots';
 import { usePresenceBeacon } from '../../lib/streaming/usePresenceBeacon';
+import { Artifacts } from '../../features/artifacts/Artifacts';
+import { Competitors } from '../../features/competitors/Competitors';
 
 interface Question {
   id: string;
@@ -246,6 +248,10 @@ export const Interview = (): JSX.Element => {
           Run synthesis
         </Link>
       </header>
+      <section className="grid gap-4 lg:grid-cols-2">
+        <Artifacts cycleId={cid} />
+        <Competitors cycleId={cid} />
+      </section>
       {grouped.map(([cluster, qs]) => (
         <section key={cluster} className="space-y-3">
           <h2 className="text-xs uppercase tracking-wide text-[color:var(--color-fg-subtle)]">
