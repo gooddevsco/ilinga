@@ -10,6 +10,8 @@ import {
   softDeleteTenant,
   transferOwnership,
   restoreTenant,
+  updateTenant,
+  verifyCustomDomain,
 } from '../lib/tenants/service.js';
 import { badRequest } from '../lib/problem.js';
 
@@ -98,5 +100,48 @@ tenantRoutes.post(
   async (c) => {
     await restoreTenant(c.req.param('tid'));
     return c.json({ ok: true });
+  },
+);
+
+const PatchBody = z.object({
+  displayName: z.string().min(2).max(80).optional(),
+  industry: z.string().max(80).nullable().optional(),
+  countryCode: z.string().length(2).nullable().optional(),
+  brandLogoUrl: z.string().url().max(2048).nullable().optional(),
+  brandAccentHex: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/u, 'must be #RRGGBB')
+    .nullable()
+    .optional(),
+  customDomain: z
+    .string()
+    .regex(/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/u, 'invalid domain')
+    .nullable()
+    .optional(),
+});
+
+tenantRoutes.patch(
+  '/:tid',
+  requireTenantMembership('tid'),
+  requireRole('owner', 'admin'),
+  async (c) => {
+    const body = PatchBody.safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success) throw badRequest(body.error.message);
+    await updateTenant(c.req.param('tid'), body.data);
+    return c.json({ ok: true });
+  },
+);
+
+tenantRoutes.post(
+  '/:tid/custom-domain/verify',
+  requireTenantMembership('tid'),
+  requireRole('owner', 'admin'),
+  async (c) => {
+    // Real implementation issues a DNS TXT challenge; for the platform's MVP
+    // we simply mark verified after a successful round-trip from the admin
+    // who owns the DNS for the configured domain. The on-demand TLS endpoint
+    // (/v1/internal/tls-allowed) keys off this row.
+    await verifyCustomDomain(c.req.param('tid'));
+    return c.json({ ok: true, verifiedAt: new Date().toISOString() });
   },
 );

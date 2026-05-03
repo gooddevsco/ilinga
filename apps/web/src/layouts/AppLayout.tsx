@@ -15,11 +15,7 @@ const navItems = [
   { to: '/settings', label: 'Settings' },
 ];
 
-const Sidebar = ({
-  onNavigate,
-}: {
-  onNavigate?: () => void;
-}): JSX.Element => {
+const Sidebar = ({ onNavigate }: { onNavigate?: () => void }): JSX.Element => {
   const { tenants, current, setCurrent } = useTenant();
   return (
     <div className="flex h-full flex-col p-4">
@@ -70,11 +66,12 @@ const Sidebar = ({
 
 export const AppLayout = (): JSX.Element => {
   const { user, signOut, loading } = useAuth();
+  const { tenants, current, loading: tenantsLoading } = useTenant();
   const maintenance = useMaintenance();
   const navigate = useNavigate();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  if (loading) {
+  if (loading || tenantsLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center text-sm text-[color:var(--color-fg-muted)]">
         Loading…
@@ -83,6 +80,10 @@ export const AppLayout = (): JSX.Element => {
   }
   if (!user) {
     navigate('/sign-in', { replace: true });
+    return <div />;
+  }
+  if (tenants.length === 0 || !current) {
+    navigate('/onboarding/create-workspace', { replace: true });
     return <div />;
   }
 
@@ -101,11 +102,7 @@ export const AppLayout = (): JSX.Element => {
         <aside className="hidden w-56 shrink-0 border-r border-[color:var(--color-border)] bg-[color:var(--color-bg-elevated)] md:block">
           <Sidebar />
         </aside>
-        <Sheet
-          open={drawerOpen}
-          onClose={() => setDrawerOpen(false)}
-          ariaLabel="Main navigation"
-        >
+        <Sheet open={drawerOpen} onClose={() => setDrawerOpen(false)} ariaLabel="Main navigation">
           <Sidebar onNavigate={() => setDrawerOpen(false)} />
         </Sheet>
         <div className="flex min-w-0 flex-1 flex-col">

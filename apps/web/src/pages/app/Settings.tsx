@@ -19,6 +19,7 @@ import { formatDateTZ } from '../../lib/format';
 
 const tabs = [
   { to: '/settings/profile', label: 'Profile' },
+  { to: '/settings/workspace', label: 'Workspace' },
   { to: '/settings/team', label: 'Team' },
   { to: '/settings/billing', label: 'Billing' },
   { to: '/settings/ai', label: 'AI endpoints' },
@@ -139,8 +140,8 @@ export const SettingsProfile = (): JSX.Element => {
         }
       >
         <p>
-          This is a soft-delete — your data is hard-removed after 7 days. Until then you can sign back
-          in to cancel.
+          This is a soft-delete — your data is hard-removed after 7 days. Until then you can sign
+          back in to cancel.
         </p>
       </Modal>
       <Modal
@@ -228,7 +229,9 @@ export const SettingsTeam = (): JSX.Element => {
       toast.push({
         variant: 'error',
         title: 'Could not update role',
-        body: ((e as ApiError).body as { detail?: string })?.detail ?? `Status ${(e as ApiError).status}`,
+        body:
+          ((e as ApiError).body as { detail?: string })?.detail ??
+          `Status ${(e as ApiError).status}`,
       });
     }
   };
@@ -354,18 +357,15 @@ export const SettingsTeam = (): JSX.Element => {
             <Button variant="secondary" onClick={() => setTransferOpen(null)}>
               Cancel
             </Button>
-            <Button
-              variant="danger"
-              onClick={() => transferOpen && transfer(transferOpen.userId)}
-            >
+            <Button variant="danger" onClick={() => transferOpen && transfer(transferOpen.userId)}>
               Confirm transfer
             </Button>
           </>
         }
       >
         <p className="text-sm">
-          You will become an admin. {transferOpen?.email ?? ''} becomes the new owner. This cannot be
-          undone without their consent.
+          You will become an admin. {transferOpen?.email ?? ''} becomes the new owner. This cannot
+          be undone without their consent.
         </p>
       </Modal>
     </section>
@@ -401,10 +401,9 @@ export const SettingsBilling = (): JSX.Element => {
 
   const startTopUp = async (packCode: string): Promise<void> => {
     try {
-      const r = await api.post<{ url: string }>(
-        `/v1/billing/tenant/${current.id}/topup/checkout`,
-        { packCode },
-      );
+      const r = await api.post<{ url: string }>(`/v1/billing/tenant/${current.id}/topup/checkout`, {
+        packCode,
+      });
       window.location.assign(r.url);
     } catch {
       toast.push({ variant: 'error', title: 'Checkout failed' });
@@ -458,3 +457,4 @@ export { SettingsSecurity } from './settings/Security';
 export { SettingsPrivacy } from './settings/Privacy';
 export { SettingsWebhooks } from './settings/Webhooks';
 export { SettingsApiTokens } from './settings/ApiTokens';
+export { SettingsWorkspace } from './settings/Workspace';

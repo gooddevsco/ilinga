@@ -172,7 +172,10 @@ export const transferOwnership = async (
       .update(schema.tenantMembers)
       .set({ role: 'admin' })
       .where(
-        and(eq(schema.tenantMembers.tenantId, tenantId), eq(schema.tenantMembers.userId, fromUserId)),
+        and(
+          eq(schema.tenantMembers.tenantId, tenantId),
+          eq(schema.tenantMembers.userId, fromUserId),
+        ),
       );
     await tx
       .update(schema.tenantMembers)
@@ -202,13 +205,42 @@ export const softDeleteTenant = async (tenantId: string, deletedBy: string): Pro
   });
 };
 
+export interface TenantPatch {
+  displayName?: string;
+  industry?: string | null;
+  countryCode?: string | null;
+  brandLogoUrl?: string | null;
+  brandAccentHex?: string | null;
+  customDomain?: string | null;
+}
+
+export const updateTenant = async (tenantId: string, patch: TenantPatch): Promise<void> => {
+  const setObj: Partial<typeof schema.tenants.$inferInsert> = {
+    updatedAt: new Date(),
+  };
+  if (patch.displayName !== undefined) setObj.displayName = patch.displayName;
+  if (patch.industry !== undefined) setObj.industry = patch.industry;
+  if (patch.countryCode !== undefined) setObj.countryCode = patch.countryCode;
+  if (patch.brandLogoUrl !== undefined) setObj.brandLogoUrl = patch.brandLogoUrl;
+  if (patch.brandAccentHex !== undefined) setObj.brandAccentHex = patch.brandAccentHex;
+  if (patch.customDomain !== undefined) {
+    setObj.customDomain = patch.customDomain;
+    setObj.customDomainVerifiedAt = null;
+  }
+  await getDb().update(schema.tenants).set(setObj).where(eq(schema.tenants.id, tenantId));
+};
+
+export const verifyCustomDomain = async (tenantId: string): Promise<void> => {
+  await getDb()
+    .update(schema.tenants)
+    .set({ customDomainVerifiedAt: new Date() })
+    .where(eq(schema.tenants.id, tenantId));
+};
+
 export const restoreTenant = async (tenantId: string): Promise<void> => {
   const db = getDb();
   await db.transaction(async (tx) => {
-    await tx
-      .update(schema.tenants)
-      .set({ deletedAt: null })
-      .where(eq(schema.tenants.id, tenantId));
+    await tx.update(schema.tenants).set({ deletedAt: null }).where(eq(schema.tenants.id, tenantId));
     await tx
       .update(schema.deletionTombstones)
       .set({ hardDeletedAt: null })

@@ -13,6 +13,7 @@ import { SignIn } from './pages/auth/SignIn';
 import { SignUp } from './pages/auth/SignUp';
 import { GoogleCallback, MagicCallback } from './pages/auth/Callback';
 import { StakeholderPortal } from './pages/stakeholder/StakeholderPortal';
+import { CreateWorkspace } from './pages/onboarding/CreateWorkspace';
 import { Dashboard } from './pages/app/Dashboard';
 import { Ventures } from './pages/app/Ventures';
 import { VentureNew } from './pages/app/VentureNew';
@@ -35,6 +36,7 @@ import {
   SettingsSecurity,
   SettingsTeam,
   SettingsWebhooks,
+  SettingsWorkspace,
 } from './pages/app/Settings';
 import { AdminLayout } from './pages/admin/AdminLayout';
 import { AdminOverview } from './pages/admin/AdminOverview';
@@ -68,6 +70,7 @@ export const App = (): JSX.Element => (
         <Route path="/auth/callback/magic" element={<MagicCallback />} />
         <Route path="/auth/callback/google" element={<GoogleCallback />} />
         <Route path="/s/:token" element={<StakeholderPortal />} />
+        <Route path="/onboarding/create-workspace" element={<CreateWorkspace />} />
 
         <Route path="/errors/403" element={<ForbiddenPage />} />
         <Route path="/errors/500" element={<ServerErrorPage />} />
@@ -93,6 +96,7 @@ export const App = (): JSX.Element => (
         <Route path="/settings" element={<Navigate to="/settings/profile" replace />} />
         <Route path="/settings/*" element={<SettingsLayout />}>
           <Route path="profile" element={<SettingsProfile />} />
+          <Route path="workspace" element={<SettingsWorkspace />} />
           <Route path="team" element={<SettingsTeam />} />
           <Route path="billing" element={<SettingsBilling />} />
           <Route path="ai" element={<SettingsAi />} />

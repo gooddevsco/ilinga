@@ -5,7 +5,9 @@ import { setCookie, getCookie, deleteCookie } from 'hono/cookie';
 import { config } from '../config.js';
 import { sendTracked } from '../lib/mailer.js';
 import { issueMagicLink, consumeMagicLink, type MagicLinkPurpose } from '../lib/auth/magic-link.js';
-import { upsertUser } from '../lib/auth/users.js';
+import { setUserEmail, upsertUser } from '../lib/auth/users.js';
+import { getMembership } from '../lib/tenants/service.js';
+import { schema, getDb } from '@ilinga/db';
 import { createSession, resolveSession, revokeSession } from '../lib/auth/sessions.js';
 import {
   buildGoogleAuthUrl,
@@ -90,6 +92,34 @@ authRoutes.post('/magic-link/verify', async (c) => {
     throw unauthorized('Invalid or expired link');
   }
   const user = await upsertUser({ email: result.email });
+
+  // tenant_invite metadata.{tenantId, role}: atomically add the user to the
+  // tenant on first redemption. Idempotent: if the membership already
+  // exists we leave it alone.
+  let invitedTenantId: string | null = null;
+  let invitedRole: string | null = null;
+  if (result.purpose === 'tenant_invite' && result.metadata) {
+    const md = result.metadata as { tenantId?: unknown; role?: unknown };
+    if (typeof md.tenantId === 'string' && typeof md.role === 'string') {
+      invitedTenantId = md.tenantId;
+      invitedRole = md.role;
+      const existing = await getMembership(md.tenantId, user.id);
+      if (!existing) {
+        await getDb()
+          .insert(schema.tenantMembers)
+          .values({ tenantId: md.tenantId, userId: user.id, role: md.role });
+      }
+    }
+  }
+
+  // email_change_verify metadata.newEmail: swap users.email atomically.
+  if (result.purpose === 'email_change_verify' && result.metadata) {
+    const md = result.metadata as { newEmail?: unknown; userId?: unknown };
+    if (typeof md.newEmail === 'string' && typeof md.userId === 'string') {
+      await setUserEmail(md.userId, md.newEmail);
+    }
+  }
+
   const session = await createSession({
     userId: user.id,
     ip: c.req.header('x-forwarded-for')?.split(',')[0]?.trim(),
@@ -102,6 +132,8 @@ authRoutes.post('/magic-link/verify', async (c) => {
     user: { id: user.id, email: user.email, displayName: user.displayName },
     purpose: result.purpose as MagicLinkPurpose,
     metadata: result.metadata,
+    invitedTenantId,
+    invitedRole,
   });
 });
 
@@ -120,10 +152,7 @@ const OAUTH_STATE_COOKIE = 'il_oauth_state';
 authRoutes.get('/google/start', (c) => {
   const cfg = config();
   if (!cfg.GOOGLE_OAUTH_CLIENT_ID) {
-    return c.json(
-      { type: 'about:blank', title: 'Google OAuth not configured', status: 503 },
-      503,
-    );
+    return c.json({ type: 'about:blank', title: 'Google OAuth not configured', status: 503 }, 503);
   }
   const built = buildGoogleAuthUrl();
   setCookie(

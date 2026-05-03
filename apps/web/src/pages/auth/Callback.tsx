@@ -2,10 +2,19 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
+import { useTenant } from '../../lib/tenant';
+
+interface VerifyResult {
+  ok: boolean;
+  purpose: string;
+  invitedTenantId: string | null;
+  invitedRole: string | null;
+}
 
 export const MagicCallback = (): JSX.Element => {
   const [params] = useSearchParams();
-  const { refresh } = useAuth();
+  const { refresh: refreshAuth } = useAuth();
+  const { refresh: refreshTenants } = useTenant();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
 
@@ -16,10 +25,19 @@ export const MagicCallback = (): JSX.Element => {
       return;
     }
     void api
-      .post('/v1/auth/magic-link/verify', { token })
-      .then(async () => {
-        await refresh();
-        navigate('/dashboard', { replace: true });
+      .post<VerifyResult>('/v1/auth/magic-link/verify', { token })
+      .then(async (verify) => {
+        await refreshAuth();
+        await refreshTenants();
+        if (verify.purpose === 'tenant_invite' && verify.invitedTenantId) {
+          // Land directly on the dashboard of the workspace they were
+          // invited into.
+          navigate('/dashboard', { replace: true });
+        } else if (verify.purpose === 'signup') {
+          navigate('/onboarding/create-workspace', { replace: true });
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
       })
       .catch((err: { status?: number }) => {
         setError(
@@ -28,7 +46,7 @@ export const MagicCallback = (): JSX.Element => {
             : 'Something went wrong. Please try again.',
         );
       });
-  }, [params, navigate, refresh]);
+  }, [params, navigate, refreshAuth, refreshTenants]);
 
   if (error) {
     return (
@@ -46,11 +64,14 @@ export const MagicCallback = (): JSX.Element => {
 };
 
 export const GoogleCallback = (): JSX.Element => {
-  const { refresh } = useAuth();
+  const { refresh: refreshAuth } = useAuth();
+  const { refresh: refreshTenants } = useTenant();
   const navigate = useNavigate();
   useEffect(() => {
-    void refresh().then(() => navigate('/dashboard', { replace: true }));
-  }, [refresh, navigate]);
+    void Promise.all([refreshAuth(), refreshTenants()]).then(() =>
+      navigate('/dashboard', { replace: true }),
+    );
+  }, [refreshAuth, refreshTenants, navigate]);
   return (
     <div className="mx-auto max-w-md py-16 text-sm text-[color:var(--color-fg-muted)]">
       Finishing sign-in…
