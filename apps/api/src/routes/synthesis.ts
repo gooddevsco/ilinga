@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { requireAuth, requireCsrf, requireTenantMembership } from '../lib/guard.js';
-import { buildSystemRegistry } from '../lib/ai/registry.js';
+import { resolveWorkload } from '../lib/ai/registry.js';
 import { cancelCycle, startCycleSynthesis } from '../lib/synthesis/pipeline.js';
 import { badRequest } from '../lib/problem.js';
 
@@ -17,8 +17,7 @@ synthesisRoutes.post(
   async (c) => {
     const body = Start.safeParse(await c.req.json().catch(() => ({})));
     if (!body.success) throw badRequest('invalid body');
-    const registry = buildSystemRegistry();
-    const pick = registry.pick('narrative');
+    const pick = await resolveWorkload(c.req.param('tid'), 'narrative');
     if (!pick) {
       return c.json(
         {

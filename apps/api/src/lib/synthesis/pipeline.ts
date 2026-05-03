@@ -3,6 +3,7 @@ import { schema, getDb } from '@ilinga/db';
 import { sseHub } from '../sse/hub.js';
 import { ulid } from 'ulid';
 import type { AiProvider } from '../ai/types.js';
+import { reduce } from './reducer.js';
 
 interface ModuleSeed {
   code: string;
@@ -39,18 +40,14 @@ const DEFAULT_MODULES: ModuleSeed[] = [
     code: 'gtm.icp',
     cluster: 'GTM',
     label: 'Ideal customer profile',
-    promptTemplate:
-      'Describe the ideal customer profile in one paragraph. Brief: {{brief}}',
+    promptTemplate: 'Describe the ideal customer profile in one paragraph. Brief: {{brief}}',
     aiWorkload: 'narrative',
     outputKeys: ['gtm.icp'],
     creditCost: 1,
   },
 ];
 
-export const seedModules = async (
-  tenantId: string,
-  cycleId: string,
-): Promise<void> => {
+export const seedModules = async (tenantId: string, cycleId: string): Promise<void> => {
   const db = getDb();
   for (const m of DEFAULT_MODULES) {
     await db
@@ -147,10 +144,7 @@ export const runModule = async (input: RunModuleInput): Promise<void> => {
         .update(schema.promptRuns)
         .set({ status: 'cancelled', cancelledAt: new Date(), completionText: completion })
         .where(eq(schema.promptRuns.id, run!.id));
-      await db
-        .update(schema.modules)
-        .set({ status: 'queued' })
-        .where(eq(schema.modules.id, m.id));
+      await db.update(schema.modules).set({ status: 'queued' }).where(eq(schema.modules.id, m.id));
       await sseHub.publish(runKey, {
         id: ulid(),
         event: 'stream.cancelled',
@@ -192,17 +186,65 @@ export const runModule = async (input: RunModuleInput): Promise<void> => {
     .where(eq(schema.modules.id, m.id));
 
   for (const code of m.outputKeys as string[]) {
-    await db.insert(schema.contentKeys).values({
-      tenantId: input.tenantId,
-      cycleId: input.cycleId,
-      code,
-      version: 1,
-      value: { text: completion },
-      confidence: 80,
-      source: 'module',
-      sourceModuleId: m.id,
-      sourcePromptRunId: run!.id,
-    });
+    // Reducer: collapse any prior candidate(s) for the same code into a
+    // single chosen value. We persist the new value as the next version
+    // (so older versions stay traceable) and record the verdict.
+    const existing = await db
+      .select({
+        value: schema.contentKeys.value,
+        version: schema.contentKeys.version,
+        confidence: schema.contentKeys.confidence,
+        source: schema.contentKeys.source,
+        createdAt: schema.contentKeys.createdAt,
+      })
+      .from(schema.contentKeys)
+      .where(
+        and(
+          eq(schema.contentKeys.tenantId, input.tenantId),
+          eq(schema.contentKeys.cycleId, input.cycleId),
+          eq(schema.contentKeys.code, code),
+        ),
+      );
+    const candidates = [
+      ...existing.map((e) => ({
+        source: e.source,
+        value: e.value,
+        confidence: e.confidence ?? 0,
+        createdAt: e.createdAt,
+      })),
+      {
+        source: 'module',
+        value: { text: completion },
+        confidence: 80,
+        createdAt: new Date(),
+      },
+    ];
+    const verdict = reduce(candidates);
+    const nextVersion = Math.max(0, ...existing.map((e) => e.version)) + 1;
+    const [created] = await db
+      .insert(schema.contentKeys)
+      .values({
+        tenantId: input.tenantId,
+        cycleId: input.cycleId,
+        code,
+        version: nextVersion,
+        value: verdict.chosen.value as never,
+        confidence: verdict.chosen.confidence,
+        source: verdict.chosen.source,
+        sourceModuleId: m.id,
+        sourcePromptRunId: run!.id,
+      })
+      .returning({ id: schema.contentKeys.id });
+    if (created && verdict.alternates.length > 0) {
+      await db.insert(schema.reducerVerdicts).values({
+        tenantId: input.tenantId,
+        cycleId: input.cycleId,
+        code,
+        candidates: candidates as never,
+        chosen: verdict.chosen as never,
+        rationale: verdict.rationale,
+      });
+    }
   }
 
   await sseHub.publish(runKey, {
