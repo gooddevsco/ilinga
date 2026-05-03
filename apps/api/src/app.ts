@@ -30,6 +30,7 @@ import { trashRoutes } from './routes/trash.js';
 import { contentKeyRoutes } from './routes/content-keys.js';
 import { artifactRoutes } from './routes/artifacts.js';
 import { competitorRoutes } from './routes/competitors.js';
+import { apiRequestLog, enforceReadOnly, globalWriteLimit } from './lib/middleware-extra.js';
 
 export const buildApp = () => {
   const cfg = config();
@@ -39,6 +40,9 @@ export const buildApp = () => {
   app.use('*', accessLogMiddleware);
   app.use('*', errorBoundaryMiddleware);
   app.use('*', securityHeadersMiddleware);
+  app.use('*', apiRequestLog);
+  app.use('*', globalWriteLimit);
+  app.use('*', enforceReadOnly);
   app.use(
     '*',
     cors({
