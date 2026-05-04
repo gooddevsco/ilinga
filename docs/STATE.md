@@ -247,6 +247,62 @@ Each slice is its own commit.
 | **Backup config (Cockroach Cloud + R2 versioning)** | missing | P0  | `infra/backup/*.tf` (need to confirm)                     | Backups run nightly; R2 has object-lock on `audit_log` exports |
 | **GitHub Actions CI**                               | removed | —   | —                                                         | User explicitly removed; not coming back unless asked          |
 
+## Marketing + legal + error pages
+
+| Item                                                          | Status         | P   | Files                                                       | Acceptance                                                                                                              |
+| ------------------------------------------------------------- | -------------- | --- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Marketing landing                                             | done           | P0  | `pages/marketing/Home.tsx`                                  | Renders the hero + features; covered by golden-path E2E                                                                 |
+| Pricing page + compare table                                  | built-untested | P0  | `pages/marketing/Pricing.tsx`                               | Reads `/v1/billing/plans`; compare table side-by-side; "Get started" → sign-up                                          |
+| Contact + Developers + Help index                             | built-untested | P1  | `pages/marketing/{Contact,Developers,Help,HelpArticle}.tsx` | Pages exist + render; Help has at least 8 articles in MDX (currently has placeholders)                                  |
+| Legal pages (Terms / Privacy / Cookies / DPA / Subprocessors) | built-untested | P0  | `pages/marketing/Legal.tsx`, `content/legal/*.mdx`          | All five render; sign-up records `terms_accepted_v=<hash>` in `audit_log`                                               |
+| Error catalogue (403 / 429 / 500 / 503 / offline / read-only) | done           | P1  | `pages/errors/ErrorPages.tsx`                               | All six render with "Back home" link (golden-path E2E covers this)                                                      |
+| Public status page (read API)                                 | built-untested | P1  | `pages/marketing/Status.tsx`, `routes/status.ts`            | Reads `platform_incidents`; updates within 30s of admin posting (separate from public-page-as-app row in Observability) |
+
+## Admin
+
+| Item                            | Status  | P   | Files                                                              | Acceptance                                                                     |
+| ------------------------------- | ------- | --- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| Admin layout + overview         | done    | P1  | `pages/admin/AdminLayout.tsx`, `AdminOverview.tsx`                 | Platform-admin role guard; sidebar nav                                         |
+| DSAR queue + resolve            | done    | P0  | `pages/admin/AdminDsar.tsx`, `routes/admin.ts`                     | Admin sees pending DSARs; resolve writes audit                                 |
+| Maintenance windows CRUD        | done    | P1  | `pages/admin/AdminMaintenance.tsx`, `routes/admin.ts:/maintenance` | Active window → banner across the app                                          |
+| Impersonate + end-impersonation | done    | P1  | `pages/admin/AdminImpersonate.tsx`, `routes/admin.ts:/impersonate` | Admin starts impersonation; banner shows on target's session; admin can end it |
+| Audit log admin filter UI       | missing | P1  | — (pages/admin/AdminAudit.tsx not built)                           | Admin can filter audit log by tenant, actor, action, time range                |
+
+## Outbound webhooks + integrations
+
+| Item                                                  | Status         | P   | Files                                                            | Acceptance                                                                           |
+| ----------------------------------------------------- | -------------- | --- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Webhook endpoints CRUD + UI                           | done           | P0  | `routes/webhooks.ts`, `pages/app/settings/Webhooks.tsx`          | Tenant adds endpoint; HMAC secret generated; `Send test event` button posts a sample |
+| Webhook delivery worker (sign + retry + dead-letter)  | built-untested | P0  | `apps/workers/src/webhook-deliverer.ts` (need to confirm exists) | Signed POST with backoff; dead-letter after 8 attempts; replay log visible           |
+| Inbound n8n callbacks (HMAC + replay)                 | built-untested | P0  | `routes/n8n.ts`, `lib/n8n/hmac.ts`                               | Signed body verifies; replay (same nonce) rejected; bad signature 401                |
+| Inbound Dodo webhooks (signature verify + idempotent) | built-untested | P0  | `lib/billing/dodo.ts`, `webhooks/dodo` route                     | Real Dodo signed payload → ledger + sub updates land; duplicate `event.id` no-ops    |
+
+## Cycle / module / output UI surfaces
+
+| Item                                       | Status         | P   | Files                                                 | Acceptance                                                          |
+| ------------------------------------------ | -------------- | --- | ----------------------------------------------------- | ------------------------------------------------------------------- |
+| Cycle reports list page                    | done           | P0  | `pages/app/CycleReports.tsx`                          | Lists rendered + scheduled reports for a cycle                      |
+| Cycle compare (two cycles side-by-side)    | done           | P0  | `pages/app/CycleCompare.tsx`                          | Reports + keys diffed; tested manually                              |
+| Synthesis pipeline page (live stages)      | built-untested | P0  | `pages/app/Synthesis.tsx`, `features/synthesis/*`     | Stage cards transition queued→running→done driven by SSE events     |
+| Content keys viewer                        | done           | P1  | `pages/app/ContentKeys.tsx`, `routes/content-keys.ts` | Lists all current keys; clicking shows version history              |
+| Trash + restore page                       | built-untested | P1  | `pages/app/Trash.tsx`, `routes/trash.ts`              | Restore within 30d works; hard-delete after retention worker firing |
+| Venture edit                               | done           | P0  | `pages/app/VentureEdit.tsx`                           | Brief, geos, industry editable                                      |
+| Report viewer + share-link + password gate | built-untested | P1  | `pages/app/ReportViewer.tsx`                          | Public viewer renders behind password; HTML/PDF download links work |
+
+## Bug report + feedback
+
+| Item                                | Status         | P   | Files                                                         | Acceptance                                                                 |
+| ----------------------------------- | -------------- | --- | ------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Bug-report widget + ingest endpoint | built-untested | P1  | `features/bug-report/BugReportWidget.tsx`, `routes/_stub.ts`? | Widget POSTs description + screenshot; stored as audit row + Sentry attach |
+
+## Crypto / KMS
+
+| Item                                     | Status  | P   | Files                                                         | Acceptance                                                                                                   |
+| ---------------------------------------- | ------- | --- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| KMS envelope encryption (env-stored KEK) | done    | P0  | `apps/api/src/lib/crypto.ts`, `packages/db/src/kms.ts`        | DEK wrap/unwrap round-trip + tamper test; existing unit tests                                                |
+| KEK rotation script                      | missing | P0  | `packages/db/scripts/rotate-kek.ts` (not built)               | Run against staging: re-wrap every DEK with new KEK; ciphertext unchanged; old KEK still valid for read-only |
+| Managed-KMS adapter (AWS KMS / GCP KMS)  | missing | P2  | `lib/kms/managed.ts` (not built; required before SOC 2 audit) | Adapter interface; one cloud provider implemented + integration test                                         |
+
 ---
 
 ## Updating this file
