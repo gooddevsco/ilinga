@@ -41,20 +41,18 @@ flipping the matching row here first.
 
 ## Next up (in order)
 
-1. Real ClamAV `clamd` TCP adapter — P0
-2. Real Playwright PDF in render worker (browser binary always installed,
+1. Real Playwright PDF in render worker (browser binary always installed,
    not best-effort) — P0
-3. n8n workflow JSON + dispatcher exercised end-to-end — P0
-4. Sentry + OTel exporter wired (real, not no-ops) — P1
-5. Public status page at `apps/status/` reading `platform_incidents` — P1
-6. Trial banner + dunning email sequence — P1
-7. Per-token rate limit + scope enforcement on API tokens — P1
-8. Time-zone-aware rendering (`users.timezone` actually read by frontend) — P2
-9. PostHog (self-hosted EU) wired behind cookie consent — P2
-10. i18n: scaffold `fr` + `es` locale, remove en-GB-only assumption — P2
+2. n8n workflow JSON + dispatcher exercised end-to-end — P0
+3. Sentry + OTel exporter wired (real, not no-ops) — P1
+4. Public status page at `apps/status/` reading `platform_incidents` — P1
+5. Trial banner + dunning email sequence — P1
+6. Per-token rate limit + scope enforcement on API tokens — P1
+7. Time-zone-aware rendering (`users.timezone` actually read by frontend) — P2
+8. PostHog (self-hosted EU) wired behind cookie consent — P2
+9. i18n: scaffold `fr` + `es` locale, remove en-GB-only assumption — P2
 
-The P0 stack is ~3 days of work. Start at the top and walk down. Each
-slice is its own commit.
+Each slice is its own commit.
 
 ---
 
@@ -97,12 +95,12 @@ slice is its own commit.
 
 ## Artifacts + competitors
 
-| Item                                                   | Status         | P   | Files                                                     | Acceptance                                                                                                                                                                        |
-| ------------------------------------------------------ | -------------- | --- | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Artifact upload UI (presigned PUT)                     | done           | P0  | `features/artifacts/Artifacts.tsx`, `routes/artifacts.ts` | Three-step (presign → PUT → finalise) lands in MinIO                                                                                                                              |
-| Artifact scan worker (ClamAV)                          | stubbed        | P0  | `apps/workers/src/scan.ts`                                | Real `clamd` TCP zINSTREAM; EICAR file → `infected` + quarantined; clean PDF passes                                                                                               |
-| Artifact text extraction (pdf-parse / mammoth / plain) | built-untested | P0  | `apps/workers/src/extract.ts`, `extract.test.ts`          | text/\* + JSON path unit-tested + run green; PDF (pdf-parse@^2) + DOCX (mammoth@^1) paths code-correct but need exercising against a real upload. OCR (tesseract) is a follow-up. |
-| Competitor add + scrape (cheerio)                      | done           | P1  | `apps/workers/src/scrape.ts`                              | Per-tagged user-agent, 15s timeout, writes summary                                                                                                                                |
+| Item                                                   | Status         | P   | Files                                                     | Acceptance                                                                                                                                                                                                                                               |
+| ------------------------------------------------------ | -------------- | --- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Artifact upload UI (presigned PUT)                     | done           | P0  | `features/artifacts/Artifacts.tsx`, `routes/artifacts.ts` | Three-step (presign → PUT → finalise) lands in MinIO                                                                                                                                                                                                     |
+| Artifact scan worker (ClamAV)                          | built-untested | P0  | `apps/workers/src/clamd.ts`, `clamd.test.ts`, `scan.ts`   | zINSTREAM client + protocol unit tests against mock TCP (clean/infected/size-limit/payload-verbatim/ping); worker calls clamd when `IL_CLAMD_HOST` set, dev fallback writes `no-clamd-configured`. Needs real clamd + EICAR file in dev to flip to done. |
+| Artifact text extraction (pdf-parse / mammoth / plain) | built-untested | P0  | `apps/workers/src/extract.ts`, `extract.test.ts`          | text/\* + JSON path unit-tested + run green; PDF (pdf-parse@^2) + DOCX (mammoth@^1) paths code-correct but need exercising against a real upload. OCR (tesseract) is a follow-up.                                                                        |
+| Competitor add + scrape (cheerio)                      | done           | P1  | `apps/workers/src/scrape.ts`                              | Per-tagged user-agent, 15s timeout, writes summary                                                                                                                                                                                                       |
 
 ## Synthesis + AI
 
