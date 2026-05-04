@@ -70,11 +70,14 @@ export const CommandPaletteProvider = ({ children }: { children: ReactNode }): J
   );
 };
 
-export const useCommandPalette = (): PaletteContextValue => {
-  const ctx = useContext(PaletteContext);
-  if (!ctx) throw new Error('useCommandPalette outside CommandPaletteProvider');
-  return ctx;
+const noopPalette: PaletteContextValue = {
+  open: false,
+  toggle: () => undefined,
+  close: () => undefined,
 };
+
+export const useCommandPalette = (): PaletteContextValue =>
+  useContext(PaletteContext) ?? noopPalette;
 
 const Palette = ({ close }: { close: () => void }): JSX.Element => {
   const { current } = useTenant();

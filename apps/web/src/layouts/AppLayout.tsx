@@ -8,6 +8,7 @@ import { useTenant, type TenantSummary } from '../lib/tenant';
 import { BugReportWidget } from '../features/bug-report/BugReportWidget';
 import { useCommandPalette } from '../features/palette/CommandPalette';
 import { useSubscriptionStatus } from '../lib/subscription';
+import { useImpersonation } from '../lib/impersonation';
 
 interface NavEntry {
   to: string;
@@ -382,6 +383,7 @@ export const AppLayout = (): JSX.Element => {
   const location = useLocation();
   const { toggle: paletteToggle } = useCommandPalette();
   const subscription = useSubscriptionStatus();
+  const impersonation = useImpersonation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { balance, cap } = useCreditBalance(current?.id);
 
@@ -393,7 +395,7 @@ export const AppLayout = (): JSX.Element => {
     }
   }, [loading, tenantsLoading, user, tenants.length, location.pathname, navigate]);
 
-  if (loading || tenantsLoading) {
+  if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center text-sm text-[color:var(--ink-mute)]">
         <span className="spinner mr-2" /> Loading…
@@ -404,13 +406,31 @@ export const AppLayout = (): JSX.Element => {
     navigate('/sign-in', { replace: true });
     return <div />;
   }
-  if (tenants.length === 0 || !current) {
-    navigate('/onboarding/create-workspace', { replace: true });
-    return <div />;
-  }
 
   const banner = (
     <>
+      {impersonation && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex items-center justify-center gap-3 bg-[color:var(--color-warning)]/10 px-4 py-2 text-center text-[13px] text-[color:var(--color-warning)]"
+        >
+          <span>
+            Impersonating this user — admin {impersonation.adminUserId.slice(0, 8)}… · reason: “
+            {impersonation.reason}”
+          </span>
+          <button
+            type="button"
+            className="underline"
+            onClick={async () => {
+              await api.post(`/v1/admin/impersonate/${impersonation.id}/end`);
+              window.location.reload();
+            }}
+          >
+            End impersonation
+          </button>
+        </div>
+      )}
       {maintenance.active && (
         <div
           role="status"

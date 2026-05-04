@@ -12,6 +12,99 @@ export const billingRoutes = new Hono();
 
 const Subscribe = z.object({ planCode: z.string().min(2).max(64) });
 
+billingRoutes.get('/plans', async (c) => {
+  const rows = await getDb()
+    .select({
+      code: schema.plans.code,
+      displayName: schema.plans.displayName,
+      monthlyUsdCents: schema.plans.monthlyUsdCents,
+      monthlyCredits: schema.plans.monthlyCredits,
+      seats: schema.plans.seats,
+    })
+    .from(schema.plans)
+    .where(eq(schema.plans.isActive, true));
+  return c.json({ plans: rows });
+});
+
+billingRoutes.post(
+  '/tenant/:tid/subscribe/preview',
+  requireAuth,
+  requireCsrf,
+  requireTenantMembership('tid'),
+  async (c) => {
+    const body = Subscribe.safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success) throw badRequest('invalid body');
+    const tenantId = c.req.param('tid');
+    const db = getDb();
+    const [target] = await db
+      .select()
+      .from(schema.plans)
+      .where(eq(schema.plans.code, body.data.planCode))
+      .limit(1);
+    if (!target) throw notFound('plan');
+    const subRows = await db
+      .select({
+        status: schema.subscriptions.status,
+        currentPeriodStart: schema.subscriptions.currentPeriodStart,
+        currentPeriodEnd: schema.subscriptions.currentPeriodEnd,
+        planId: schema.subscriptions.planId,
+      })
+      .from(schema.subscriptions)
+      .where(eq(schema.subscriptions.tenantId, tenantId))
+      .limit(1);
+    const sub = subRows[0];
+    let currentPlan: { code: string; monthlyUsdCents: number } | null = null;
+    if (sub) {
+      const [p] = await db
+        .select({ code: schema.plans.code, monthlyUsdCents: schema.plans.monthlyUsdCents })
+        .from(schema.plans)
+        .where(eq(schema.plans.id, sub.planId))
+        .limit(1);
+      if (p) currentPlan = p;
+    }
+
+    const now = Date.now();
+    let prorationCents = 0;
+    let unusedCents = 0;
+    let newPlanProrataCents = target.monthlyUsdCents;
+    let daysLeft = 0;
+    let periodDays = 30;
+    if (
+      sub &&
+      currentPlan &&
+      sub.currentPeriodStart &&
+      sub.currentPeriodEnd &&
+      sub.status === 'active'
+    ) {
+      const periodMs = sub.currentPeriodEnd.getTime() - sub.currentPeriodStart.getTime();
+      const remainingMs = Math.max(0, sub.currentPeriodEnd.getTime() - now);
+      const ratio = periodMs > 0 ? remainingMs / periodMs : 0;
+      unusedCents = Math.round(currentPlan.monthlyUsdCents * ratio);
+      newPlanProrataCents = Math.round(target.monthlyUsdCents * ratio);
+      prorationCents = newPlanProrataCents - unusedCents;
+      daysLeft = Math.ceil(remainingMs / 86_400_000);
+      periodDays = Math.round(periodMs / 86_400_000);
+    }
+
+    return c.json({
+      currentPlanCode: currentPlan?.code ?? null,
+      targetPlanCode: target.code,
+      targetPlanName: target.displayName,
+      monthlyUsdCents: target.monthlyUsdCents,
+      monthlyCredits: target.monthlyCredits,
+      seats: target.seats,
+      proration: {
+        unusedCreditCents: unusedCents,
+        newPlanProrataCents,
+        dueTodayCents: Math.max(0, prorationCents),
+        nextChargeCents: target.monthlyUsdCents,
+        daysLeftInPeriod: daysLeft,
+        periodDays,
+      },
+    });
+  },
+);
+
 billingRoutes.post(
   '/tenant/:tid/subscribe/checkout',
   requireAuth,

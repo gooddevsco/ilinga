@@ -47,3 +47,36 @@ sessionRoutes.post('/revoke-all', async (c) => {
   await revokeAllForUser(userId);
   return c.json({ ok: true });
 });
+
+sessionRoutes.get('/devices', async (c) => {
+  const userId = c.get('userId') as string;
+  const rows = await getDb()
+    .select({
+      id: schema.userTrustedDevices.id,
+      label: schema.userTrustedDevices.label,
+      lastSeenAt: schema.userTrustedDevices.lastSeenAt,
+      expiresAt: schema.userTrustedDevices.expiresAt,
+      revokedAt: schema.userTrustedDevices.revokedAt,
+      impossibleTravelFlagged: schema.userTrustedDevices.impossibleTravelFlagged,
+    })
+    .from(schema.userTrustedDevices)
+    .where(eq(schema.userTrustedDevices.userId, userId))
+    .orderBy(desc(schema.userTrustedDevices.lastSeenAt))
+    .limit(50);
+  return c.json({ devices: rows });
+});
+
+sessionRoutes.delete('/devices/:id', async (c) => {
+  const userId = c.get('userId') as string;
+  await getDb()
+    .update(schema.userTrustedDevices)
+    .set({ revokedAt: new Date() })
+    .where(
+      and(
+        eq(schema.userTrustedDevices.id, c.req.param('id')),
+        eq(schema.userTrustedDevices.userId, userId),
+        isNull(schema.userTrustedDevices.revokedAt),
+      ),
+    );
+  return c.json({ ok: true });
+});

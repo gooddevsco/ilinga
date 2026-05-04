@@ -24,7 +24,7 @@ const tabs: { to: string; label: string; section: 'You' | 'Workspace' | 'Plumbin
   { to: '/settings/sessions', label: 'Sessions', section: 'You' },
   { to: '/settings/security', label: 'Security', section: 'You' },
   { to: '/settings/privacy', label: 'Privacy', section: 'You' },
-  { to: '/settings/workspace', label: 'Workspace', section: 'Workspace' },
+  { to: '/settings/workspace', label: 'General', section: 'Workspace' },
   { to: '/settings/team', label: 'Team', section: 'Workspace' },
   { to: '/settings/billing', label: 'Billing', section: 'Workspace' },
   { to: '/settings/api-requests', label: 'API requests', section: 'Workspace' },
@@ -421,9 +421,39 @@ export const SettingsTeam = (): JSX.Element => {
   );
 };
 
+interface PlanRow {
+  code: string;
+  displayName: string;
+  monthlyUsdCents: number;
+  monthlyCredits: number;
+  seats: number;
+}
+
+interface Preview {
+  currentPlanCode: string | null;
+  targetPlanCode: string;
+  targetPlanName: string;
+  monthlyUsdCents: number;
+  monthlyCredits: number;
+  proration: {
+    dueTodayCents: number;
+    nextChargeCents: number;
+    daysLeftInPeriod: number;
+    periodDays: number;
+  };
+}
+
+const usd = (cents: number): string =>
+  (cents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+
 export const SettingsBilling = (): JSX.Element => {
   const { current } = useTenant();
   const [balance, setBalance] = useState<number | null>(null);
+  const [plans, setPlans] = useState<PlanRow[]>([]);
+  const [preview, setPreview] = useState<Preview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [coupon, setCoupon] = useState('');
+  const [redeeming, setRedeeming] = useState(false);
   const toast = useToast();
 
   useEffect(() => {
@@ -432,9 +462,28 @@ export const SettingsBilling = (): JSX.Element => {
       .get<{ balance: number }>(`/v1/billing/tenant/${current.id}/balance`)
       .then((r) => setBalance(r.balance))
       .catch(() => undefined);
+    api
+      .get<{ plans: PlanRow[] }>('/v1/billing/plans')
+      .then((r) => setPlans(r.plans))
+      .catch(() => undefined);
   }, [current]);
 
   if (!current) return <p className="text-sm text-[color:var(--color-fg-muted)]">No workspace.</p>;
+
+  const previewPlan = async (planCode: string): Promise<void> => {
+    setPreviewLoading(true);
+    setPreview(null);
+    try {
+      const r = await api.post<Preview>(`/v1/billing/tenant/${current.id}/subscribe/preview`, {
+        planCode,
+      });
+      setPreview(r);
+    } catch {
+      toast.push({ variant: 'error', title: 'Could not preview plan change' });
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
 
   const startCheckout = async (planCode: string): Promise<void> => {
     try {
@@ -459,6 +508,25 @@ export const SettingsBilling = (): JSX.Element => {
     }
   };
 
+  const redeemCoupon = async (): Promise<void> => {
+    if (!coupon.trim()) return;
+    setRedeeming(true);
+    try {
+      await api.post(`/v1/billing/tenant/${current.id}/coupons/redeem`, { code: coupon.trim() });
+      toast.push({ variant: 'success', title: 'Coupon redeemed', body: 'Discount applied.' });
+      setCoupon('');
+    } catch (e) {
+      const detail = ((e as ApiError).body as { detail?: string })?.detail;
+      toast.push({
+        variant: 'error',
+        title: 'Coupon failed',
+        body: detail ?? 'Code not valid for this workspace.',
+      });
+    } finally {
+      setRedeeming(false);
+    }
+  };
+
   return (
     <section className="space-y-4">
       <Card>
@@ -468,12 +536,72 @@ export const SettingsBilling = (): JSX.Element => {
           <p className="text-sm text-[color:var(--color-fg-muted)]">
             Credit balance: <strong>{balance ?? '…'}</strong>
           </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {['studio', 'pro', 'firm'].map((c) => (
-              <Button key={c} variant="secondary" onClick={() => startCheckout(c)}>
-                Move to {c}
-              </Button>
-            ))}
+          {plans.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {plans
+                .filter((p) => p.code !== 'free' && p.code !== 'enterprise')
+                .map((p) => (
+                  <Button key={p.code} variant="secondary" onClick={() => void previewPlan(p.code)}>
+                    Move to {p.displayName} ({usd(p.monthlyUsdCents)}/mo)
+                  </Button>
+                ))}
+            </div>
+          ) : (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {['studio', 'pro', 'firm'].map((c) => (
+                <Button key={c} variant="secondary" onClick={() => void previewPlan(c)}>
+                  Move to {c}
+                </Button>
+              ))}
+            </div>
+          )}
+        </CardBody>
+      </Card>
+      {(previewLoading || preview) && (
+        <Card>
+          <CardHeader>Plan change preview</CardHeader>
+          <CardBody>
+            {previewLoading && <Skeleton height={80} />}
+            {preview && (
+              <div className="space-y-2 text-sm">
+                <p>
+                  Switching to <strong>{preview.targetPlanName}</strong> —{' '}
+                  {preview.monthlyCredits.toLocaleString()} credits/mo,{' '}
+                  {usd(preview.monthlyUsdCents)}/month.
+                </p>
+                <p>
+                  <strong>{usd(preview.proration.dueTodayCents)}</strong> due today
+                  {preview.proration.daysLeftInPeriod > 0 && (
+                    <>
+                      {' '}
+                      (covers {preview.proration.daysLeftInPeriod} days remaining in this period)
+                    </>
+                  )}
+                  ; <strong>{usd(preview.proration.nextChargeCents)}</strong> on the next renewal.
+                </p>
+                <Button onClick={() => void startCheckout(preview.targetPlanCode)}>
+                  Confirm and continue to checkout
+                </Button>
+              </div>
+            )}
+          </CardBody>
+        </Card>
+      )}
+      <Card>
+        <CardHeader>Redeem coupon</CardHeader>
+        <CardBody>
+          <div className="flex flex-wrap items-end gap-2">
+            <Field label="Coupon code" htmlFor="coupon-code">
+              <Input
+                id="coupon-code"
+                value={coupon}
+                onChange={(e) => setCoupon(e.target.value)}
+                placeholder="ILINGA-LAUNCH"
+              />
+            </Field>
+            <Button onClick={redeemCoupon} loading={redeeming}>
+              Redeem
+            </Button>
           </div>
         </CardBody>
       </Card>
@@ -508,3 +636,4 @@ export { SettingsWebhooks } from './settings/Webhooks';
 export { SettingsApiTokens } from './settings/ApiTokens';
 export { SettingsWorkspace } from './settings/Workspace';
 export { SettingsSessions } from './settings/Sessions';
+export { SettingsApiRequests } from './settings/ApiRequests';

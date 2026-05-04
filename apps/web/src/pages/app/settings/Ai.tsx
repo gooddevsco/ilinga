@@ -95,6 +95,34 @@ export const SettingsAi = (): JSX.Element => {
     refresh();
   };
 
+  const dryRun = async (id: string): Promise<void> => {
+    try {
+      const r = await api.post<{
+        ok: boolean;
+        provider: string;
+        model: string;
+        latencyMs: number;
+        sample: string;
+        error?: string;
+      }>(`/v1/ai-endpoints/tenant/${current.id}/${id}/dry-run`, {
+        prompt: 'Reply with a single word: pong.',
+      });
+      toast.push({
+        variant: 'success',
+        title: `${r.provider} · ${r.latencyMs}ms`,
+        body: r.sample || '(empty response)',
+      });
+    } catch (e) {
+      const err = e as ApiError;
+      const detail = (err.body as { error?: string; provider?: string })?.error;
+      toast.push({
+        variant: 'error',
+        title: 'Test failed',
+        body: detail ?? `Status ${err.status}`,
+      });
+    }
+  };
+
   return (
     <section className="space-y-4">
       <header className="flex items-center justify-between">
@@ -129,9 +157,14 @@ export const SettingsAi = (): JSX.Element => {
                         ))}
                       </div>
                     </div>
-                    <Button size="sm" variant="danger" onClick={() => remove(e.id)}>
-                      Remove
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" variant="secondary" onClick={() => dryRun(e.id)}>
+                        Send test prompt
+                      </Button>
+                      <Button size="sm" variant="danger" onClick={() => remove(e.id)}>
+                        Remove
+                      </Button>
+                    </div>
                   </div>
                 </CardBody>
               </Card>

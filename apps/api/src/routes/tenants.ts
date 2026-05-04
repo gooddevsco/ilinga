@@ -1,5 +1,7 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
+import { and, desc, eq } from 'drizzle-orm';
+import { schema, getDb } from '@ilinga/db';
 import { requireAuth, requireCsrf, requireRole, requireTenantMembership } from '../lib/guard.js';
 import {
   createTenant,
@@ -143,5 +145,37 @@ tenantRoutes.post(
     // (/v1/internal/tls-allowed) keys off this row.
     await verifyCustomDomain(c.req.param('tid'));
     return c.json({ ok: true, verifiedAt: new Date().toISOString() });
+  },
+);
+
+tenantRoutes.get(
+  '/:tid/api-requests',
+  requireTenantMembership('tid'),
+  requireRole('owner', 'admin'),
+  async (c) => {
+    const tid = c.req.param('tid');
+    const limit = Math.min(Number(c.req.query('limit') ?? 100), 500);
+    const status = c.req.query('status');
+    const where = status
+      ? and(eq(schema.apiRequestLog.tenantId, tid), eq(schema.apiRequestLog.status, Number(status)))
+      : eq(schema.apiRequestLog.tenantId, tid);
+    const rows = await getDb()
+      .select({
+        id: schema.apiRequestLog.id,
+        method: schema.apiRequestLog.method,
+        path: schema.apiRequestLog.path,
+        status: schema.apiRequestLog.status,
+        latencyMs: schema.apiRequestLog.latencyMs,
+        ip: schema.apiRequestLog.ip,
+        actorUserId: schema.apiRequestLog.actorUserId,
+        apiTokenId: schema.apiRequestLog.apiTokenId,
+        requestId: schema.apiRequestLog.requestId,
+        createdAt: schema.apiRequestLog.createdAt,
+      })
+      .from(schema.apiRequestLog)
+      .where(where)
+      .orderBy(desc(schema.apiRequestLog.createdAt))
+      .limit(limit);
+    return c.json({ requests: rows });
   },
 );

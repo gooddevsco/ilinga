@@ -136,6 +136,23 @@ const Impersonate = z.object({
   reason: z.string().min(2).max(500),
 });
 
+adminRoutes.post('/impersonate/:id/end', async (c) => {
+  const userId = c.get('userId') as string;
+  await requirePlatformAdmin(userId);
+  await getDb()
+    .update(schema.impersonationSessions)
+    .set({ endedAt: new Date() })
+    .where(eq(schema.impersonationSessions.id, c.req.param('id')));
+  await appendAudit({
+    actorUserId: userId,
+    action: 'admin.impersonate.end',
+    targetTable: 'impersonation_sessions',
+    targetId: c.req.param('id'),
+    requestId: c.get('requestId') as string | null,
+  });
+  return c.json({ ok: true });
+});
+
 adminRoutes.post('/impersonate', async (c) => {
   const userId = c.get('userId') as string;
   await requirePlatformAdmin(userId);

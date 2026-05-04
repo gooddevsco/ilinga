@@ -45,6 +45,7 @@ import {
   SettingsWebhooks,
   SettingsWorkspace,
   SettingsSessions,
+  SettingsApiRequests,
 } from './pages/app/Settings';
 import { AdminLayout } from './pages/admin/AdminLayout';
 import { AdminOverview } from './pages/admin/AdminOverview';
@@ -119,6 +120,7 @@ export const App = (): JSX.Element => (
           <Route path="webhooks" element={<SettingsWebhooks />} />
           <Route path="api-tokens" element={<SettingsApiTokens />} />
           <Route path="sessions" element={<SettingsSessions />} />
+          <Route path="api-requests" element={<SettingsApiRequests />} />
           <Route path="security" element={<SettingsSecurity />} />
           <Route path="privacy" element={<SettingsPrivacy />} />
         </Route>

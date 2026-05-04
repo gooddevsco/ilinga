@@ -1,4 +1,4 @@
-export { render, type RenderInput, type RenderedEmail } from './render.js';
+export { render, type RenderInput, type RenderedEmail, type BrandInput } from './render.js';
 export {
   renderMagicLinkEmail,
   renderNewDeviceAlertEmail,

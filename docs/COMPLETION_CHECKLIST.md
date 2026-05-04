@@ -1,6 +1,6 @@
 # Completion checklist (honest gap audit)
 
-Last updated: 2026-05-03. Each item lists owning file(s) and the tests that
+Last updated: 2026-05-04. Each item lists owning file(s) and the tests that
 prove it works. Boxes are ticked only when the code exists, the test runs
 green, and the path has been exercised end-to-end.
 
@@ -88,6 +88,14 @@ green, and the path has been exercised end-to-end.
 - [x] Activity feed page reads /v1/activity
 - [x] Notifications inbox UI + mark-read endpoints
 - [x] Sessions list + revoke individual + revoke-all
+- [x] Trusted device list + revoke (`/v1/sessions/devices`)
+- [x] Per-tenant API request log viewer (Settings → API requests)
+- [x] AI endpoint dry-run "Send test prompt" button + 502 surface
+- [x] Plan upgrade proration preview (`/v1/billing/.../subscribe/preview`)
+- [x] Coupon redemption form on Billing tab
+- [x] Impersonation banner + end-impersonation button (admin)
+- [x] Tenant brand (logo + accent) propagated into rendered emails
+- [x] Comment @-mention notifications written to inbox
 
 ## Rate limits + security + audit
 

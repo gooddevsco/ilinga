@@ -60,10 +60,34 @@ authRoutes.post(
         ...(body.data.metadata ? { metadata: body.data.metadata } : {}),
       } as const;
       const link = await issueMagicLink(linkInput);
+      let brand: { name: string; accentHex?: string; logoUrl?: string | null } | undefined;
+      const meta = body.data.metadata as
+        | { tenantId?: string; newEmail?: string; userId?: string; role?: string }
+        | undefined;
+      if (body.data.purpose === 'tenant_invite' && meta?.tenantId) {
+        const { eq: dEq } = await import('drizzle-orm');
+        const rows = await getDb()
+          .select({
+            name: schema.tenants.displayName,
+            accent: schema.tenants.brandAccentHex,
+            logo: schema.tenants.brandLogoUrl,
+          })
+          .from(schema.tenants)
+          .where(dEq(schema.tenants.id, meta.tenantId))
+          .limit(1);
+        if (rows[0]) {
+          brand = {
+            name: rows[0].name,
+            ...(rows[0].accent ? { accentHex: rows[0].accent } : {}),
+            logoUrl: rows[0].logo,
+          };
+        }
+      }
       const tpl = renderMagicLinkEmail({
         url: link.url,
         purpose: body.data.purpose,
         expiresInMinutes: cfg.IL_MAGIC_LINK_TTL_MIN,
+        ...(brand ? { brand } : {}),
       });
       await sendTracked({
         template: `magic_link.${body.data.purpose}`,
@@ -219,6 +243,32 @@ authRoutes.get('/me', async (c) => {
   const sess = await resolveSession(raw);
   if (!sess) throw unauthorized();
   return c.json({ userId: sess.userId, expiresAt: sess.expiresAt });
+});
+
+authRoutes.get('/impersonation', async (c) => {
+  const raw = readSession(c);
+  if (!raw) throw unauthorized();
+  const sess = await resolveSession(raw);
+  if (!sess) throw unauthorized();
+  const { and: dAnd, eq: dEq, isNull: dIsNull, desc: dDesc } = await import('drizzle-orm');
+  const rows = await getDb()
+    .select({
+      id: schema.impersonationSessions.id,
+      adminUserId: schema.impersonationSessions.adminUserId,
+      tenantId: schema.impersonationSessions.tenantId,
+      reason: schema.impersonationSessions.reason,
+      startedAt: schema.impersonationSessions.startedAt,
+    })
+    .from(schema.impersonationSessions)
+    .where(
+      dAnd(
+        dEq(schema.impersonationSessions.impersonatedUserId, sess.userId),
+        dIsNull(schema.impersonationSessions.endedAt),
+      ),
+    )
+    .orderBy(dDesc(schema.impersonationSessions.startedAt))
+    .limit(1);
+  return c.json({ active: rows[0] ?? null });
 });
 
 authRoutes.get('/csrf', (c) => {

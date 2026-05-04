@@ -1,4 +1,4 @@
-import { render, type RenderedEmail } from './render.js';
+import { render, type RenderedEmail, type BrandInput } from './render.js';
 
 export interface MagicLinkData {
   recipientName?: string | null;
@@ -11,6 +11,7 @@ export interface MagicLinkData {
     | 'account_recovery'
     | 'step_up';
   expiresInMinutes: number;
+  brand?: BrandInput;
 }
 
 const purposeCopy = {
@@ -50,7 +51,13 @@ export const renderMagicLinkEmail = (data: MagicLinkData): RenderedEmail => {
   const copy = purposeCopy[data.purpose];
   const greeting = data.recipientName ? `Hi ${data.recipientName},<br/><br/>` : '';
   const body = `${greeting}${copy.body}<br/><br/>This link expires in ${data.expiresInMinutes} minutes.`;
-  return render({ heading: copy.heading, body, ctaLabel: copy.cta, ctaUrl: data.url });
+  return render({
+    heading: copy.heading,
+    body,
+    ctaLabel: copy.cta,
+    ctaUrl: data.url,
+    brand: data.brand,
+  });
 };
 
 export interface NewDeviceAlertData {
@@ -58,13 +65,15 @@ export interface NewDeviceAlertData {
   userAgent: string;
   timestamp: string;
   notMeUrl: string;
+  brand?: BrandInput;
 }
 export const renderNewDeviceAlertEmail = (data: NewDeviceAlertData): RenderedEmail =>
   render({
-    heading: 'New sign-in to your Ilinga account',
+    heading: `New sign-in to your ${data.brand?.name ?? 'Ilinga'} account`,
     body: `We saw a new sign-in from <b>${data.ip}</b> using <b>${data.userAgent}</b> at ${data.timestamp}. If this was you, no action is needed.`,
     ctaLabel: 'This wasn’t me',
     ctaUrl: data.notMeUrl,
+    brand: data.brand,
   });
 
 export interface PaymentReceiptData {
@@ -72,6 +81,7 @@ export interface PaymentReceiptData {
   amount: string;
   date: string;
   pdfUrl: string;
+  brand?: BrandInput;
 }
 export const renderPaymentReceiptEmail = (data: PaymentReceiptData): RenderedEmail =>
   render({
@@ -79,11 +89,13 @@ export const renderPaymentReceiptEmail = (data: PaymentReceiptData): RenderedEma
     body: `Thanks for your payment of <b>${data.amount}</b> on ${data.date}. Your invoice PDF is attached and can be downloaded below.`,
     ctaLabel: 'Download invoice',
     ctaUrl: data.pdfUrl,
+    brand: data.brand,
   });
 
 export interface LowCreditsData {
   remaining: number;
   topUpUrl: string;
+  brand?: BrandInput;
 }
 export const renderLowCreditsEmail = (data: LowCreditsData): RenderedEmail =>
   render({
@@ -91,4 +103,5 @@ export const renderLowCreditsEmail = (data: LowCreditsData): RenderedEmail =>
     body: `You have <b>${data.remaining}</b> credits remaining. Top up to keep new synthesis runs and reports flowing without interruption.`,
     ctaLabel: 'Top up credits',
     ctaUrl: data.topUpUrl,
+    brand: data.brand,
   });
