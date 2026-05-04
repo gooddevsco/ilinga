@@ -41,16 +41,14 @@ flipping the matching row here first.
 
 ## Next up (in order)
 
-1. Real Playwright PDF in render worker (browser binary always installed,
-   not best-effort) — P0
-2. n8n workflow JSON + dispatcher exercised end-to-end — P0
-3. Sentry + OTel exporter wired (real, not no-ops) — P1
-4. Public status page at `apps/status/` reading `platform_incidents` — P1
-5. Trial banner + dunning email sequence — P1
-6. Per-token rate limit + scope enforcement on API tokens — P1
-7. Time-zone-aware rendering (`users.timezone` actually read by frontend) — P2
-8. PostHog (self-hosted EU) wired behind cookie consent — P2
-9. i18n: scaffold `fr` + `es` locale, remove en-GB-only assumption — P2
+1. n8n workflow JSON + dispatcher exercised end-to-end — P0
+2. Sentry + OTel exporter wired (real, not no-ops) — P1
+3. Public status page at `apps/status/` reading `platform_incidents` — P1
+4. Trial banner + dunning email sequence — P1
+5. Per-token rate limit + scope enforcement on API tokens — P1
+6. Time-zone-aware rendering (`users.timezone` actually read by frontend) — P2
+7. PostHog (self-hosted EU) wired behind cookie consent — P2
+8. i18n: scaffold `fr` + `es` locale, remove en-GB-only assumption — P2
 
 Each slice is its own commit.
 
@@ -118,14 +116,14 @@ Each slice is its own commit.
 
 ## Reports + render
 
-| Item                                                     | Status         | P   | Files                                     | Acceptance                                                                                                                       |
-| -------------------------------------------------------- | -------------- | --- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Report grid + tier badges + locked tiles                 | done           | P0  | `pages/app/Reports.tsx`                   | Tiles match catalog; price shown                                                                                                 |
-| Render worker (Playwright PDF + HTML upload to R2/MinIO) | built-untested | P0  | `apps/workers/src/render.ts:tryRenderPdf` | Playwright binary installed in CI/dev; PDF written to MinIO; opened locally; current code falls back to HTML when binary missing |
-| Render scheduler (re-render at `nextRunAt`)              | done           | P0  | `apps/workers/src/scheduler.ts`           | Cron tick observed firing in dev with a 1m schedule                                                                              |
-| Render cancel + refund                                   | built-untested | P0  | `routes/reports.ts:/cancel`               | Cancel during PDF stage → no PDF, credits refunded                                                                               |
-| Multi-format export (HTML / DOCX / PPTX / MD)            | missing        | P1  | `lib/render/{docx,pptx,md}.ts`            | Render writes 5 `report_render_artifacts`; viewer downloads each                                                                 |
-| Tagged-PDF a11y + axe-core lint                          | missing        | P2  | `lib/render/a11y-lint.ts`                 | Bad heading order fails CI; passes on system templates                                                                           |
+| Item                                                     | Status         | P   | Files                                                                | Acceptance                                                                                                                                                                                                                                                                                                                                                                                                 |
+| -------------------------------------------------------- | -------------- | --- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Report grid + tier badges + locked tiles                 | done           | P0  | `pages/app/Reports.tsx`                                              | Tiles match catalog; price shown                                                                                                                                                                                                                                                                                                                                                                           |
+| Render worker (Playwright PDF + HTML upload to R2/MinIO) | built-untested | P0  | `apps/workers/src/render.ts`, `playwright-pool.ts`, `render.test.ts` | Singleton chromium pool (2 contexts) + always-on render. `IL_RENDER_PDF_REQUIRED=true` (default in production) hard-fails the renderRow when Playwright/chromium isn't installed; dev keeps the soft fallback but writes the reason to `failureReason`. `pnpm playwright:install` provisions the binary at deploy. PDF + page-count parser unit-tested; need a real chromium + dev render to flip to done. |
+| Render scheduler (re-render at `nextRunAt`)              | done           | P0  | `apps/workers/src/scheduler.ts`                                      | Cron tick observed firing in dev with a 1m schedule                                                                                                                                                                                                                                                                                                                                                        |
+| Render cancel + refund                                   | built-untested | P0  | `routes/reports.ts:/cancel`                                          | Cancel during PDF stage → no PDF, credits refunded                                                                                                                                                                                                                                                                                                                                                         |
+| Multi-format export (HTML / DOCX / PPTX / MD)            | missing        | P1  | `lib/render/{docx,pptx,md}.ts`                                       | Render writes 5 `report_render_artifacts`; viewer downloads each                                                                                                                                                                                                                                                                                                                                           |
+| Tagged-PDF a11y + axe-core lint                          | missing        | P2  | `lib/render/a11y-lint.ts`                                            | Bad heading order fails CI; passes on system templates                                                                                                                                                                                                                                                                                                                                                     |
 
 ## Stakeholders
 

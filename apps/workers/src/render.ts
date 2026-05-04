@@ -3,6 +3,7 @@ import { Redis as IORedis } from 'ioredis';
 import { eq } from 'drizzle-orm';
 import { schema, getDb } from '@ilinga/db';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { withPage, verifyAvailable } from './playwright-pool.js';
 
 interface RenderJob {
   reportId: string;
@@ -21,6 +22,18 @@ interface RenderResult {
 
 const REDIS_URL = process.env.IL_REDIS_URL ?? 'redis://localhost:6379';
 const BUCKET = process.env.IL_S3_BUCKET ?? 'ilinga-eu';
+
+/**
+ * In production, missing Playwright is a hard failure: callers expect
+ * a PDF, not just HTML. Set `IL_RENDER_PDF_REQUIRED=true` (default
+ * in production) so the render is marked failed with a clear reason
+ * if chromium isn't installed. Dev keeps the soft-fallback so local
+ * smoke runs work without `playwright install chromium`.
+ */
+const PDF_REQUIRED =
+  (
+    process.env.IL_RENDER_PDF_REQUIRED ?? (process.env.NODE_ENV === 'production' ? 'true' : 'false')
+  ).toLowerCase() === 'true';
 
 let s3: S3Client | null = null;
 const getS3 = (): S3Client => {
@@ -101,32 +114,52 @@ const upload = async (key: string, body: string | Buffer, contentType: string): 
   );
 };
 
-/** Best-effort PDF render via Playwright. Returns null when the binary is
- * missing — test/dev runners typically don't have it installed. */
-const tryRenderPdf = async (
-  html: string,
-): Promise<{ buffer: Buffer; pageCount: number } | null> => {
-  try {
-    const playwright = await import('playwright');
-    const browser = await playwright.chromium.launch();
-    try {
-      const ctx = await browser.newContext();
-      const page = await ctx.newPage();
-      await page.setContent(html, { waitUntil: 'load' });
-      const buffer = await page.pdf({ format: 'A4', printBackground: true });
-      // Cheap page-count proxy: count form-feeds Playwright inserts per page.
-      const pageCount = (buffer.toString('latin1').match(/\/Type\s*\/Page[^s]/g)?.length ?? 1) | 0;
-      return { buffer, pageCount };
-    } finally {
-      await browser.close();
-    }
-  } catch (err) {
-    console.warn(`[render] Playwright PDF unavailable: ${(err as Error).message}`);
-    return null;
-  }
+/**
+ * Count `/Type /Page` markers in the PDF stream. Robust to the spaces
+ * Playwright inserts and to /Pages (the parent node) which doesn't
+ * match because of the trailing space + non-`s` character.
+ */
+const countPdfPages = (buffer: Buffer): number => {
+  const haystack = buffer.toString('latin1');
+  const matches = haystack.match(/\/Type\s*\/Page[^s]/g);
+  return matches?.length ?? 1;
 };
 
+export interface RenderPdfResult {
+  buffer: Buffer;
+  pageCount: number;
+}
+
+/**
+ * Render HTML to a PDF buffer using the Playwright pool. Throws on
+ * any Playwright failure — the caller decides how to surface it.
+ */
+export const renderPdf = async (html: string, signal?: AbortSignal): Promise<RenderPdfResult> =>
+  withPage(
+    async (page) => {
+      await page.setContent(html, { waitUntil: 'load' });
+      const buffer = await page.pdf({ format: 'A4', printBackground: true });
+      return { buffer, pageCount: countPdfPages(buffer) };
+    },
+    { ...(signal ? { signal } : {}) },
+  );
+
 export const startRenderWorker = (): Worker<RenderJob, RenderResult> => {
+  // Fire-and-log readiness check at boot so the operator sees the warning
+  // immediately rather than on the first render that ends up HTML-only.
+  void verifyAvailable().then((avail) => {
+    if (!avail.ok) {
+      const msg = `[render] Playwright unavailable: ${avail.reason}`;
+      if (PDF_REQUIRED) {
+        console.error(`${msg} — IL_RENDER_PDF_REQUIRED=true; renders will be marked failed`);
+      } else {
+        console.warn(
+          `${msg} — falling back to HTML-only output (set IL_RENDER_PDF_REQUIRED=true to enforce)`,
+        );
+      }
+    }
+  });
+
   const worker = new Worker<RenderJob, RenderResult>(
     renderQueueName,
     async (job: Job<RenderJob>): Promise<RenderResult> => {
@@ -158,15 +191,19 @@ export const startRenderWorker = (): Worker<RenderJob, RenderResult> => {
       } catch (err) {
         console.warn(`[render] HTML upload failed (continuing): ${(err as Error).message}`);
       }
+
       let pageCount = 1;
-      const pdf = await tryRenderPdf(html);
-      if (pdf) {
+      let pdfWritten = false;
+      let pdfError: string | null = null;
+
+      try {
+        const pdf = await renderPdf(html);
         pageCount = pdf.pageCount;
-        try {
-          await upload(pdfKey, pdf.buffer, 'application/pdf');
-        } catch (err) {
-          console.warn(`[render] PDF upload failed: ${(err as Error).message}`);
-        }
+        await upload(pdfKey, pdf.buffer, 'application/pdf');
+        pdfWritten = true;
+      } catch (err) {
+        pdfError = (err as Error).message;
+        console.warn(`[render] PDF render failed: ${pdfError}`);
       }
 
       const renderRow = await db
@@ -175,23 +212,45 @@ export const startRenderWorker = (): Worker<RenderJob, RenderResult> => {
         .where(eq(schema.reportRenders.reportId, report.id))
         .limit(1);
       const existingId = renderRow[0]?.id;
+
+      if (!pdfWritten && PDF_REQUIRED) {
+        // Hard fail: callers expect a PDF.
+        if (existingId) {
+          await db
+            .update(schema.reportRenders)
+            .set({
+              status: 'failed',
+              htmlS3Key: htmlKey,
+              failureReason: `pdf-render-failed: ${pdfError ?? 'unknown'}`,
+              failedAt: new Date(),
+            })
+            .where(eq(schema.reportRenders.id, existingId));
+        }
+        return { status: 'failed', htmlS3Key: htmlKey };
+      }
+
       if (existingId) {
         await db
           .update(schema.reportRenders)
           .set({
             status: 'complete',
             htmlS3Key: htmlKey,
-            pdfS3Key: pdf ? pdfKey : null,
+            pdfS3Key: pdfWritten ? pdfKey : null,
             completedAt: new Date(),
             pageCount,
+            // When PDF rendering soft-failed in dev, surface the reason on
+            // the row so the UI can show "PDF unavailable: <reason>".
+            failureReason: pdfWritten ? null : pdfError,
           })
           .where(eq(schema.reportRenders.id, existingId));
       }
-      console.warn(`[render] report ${report.id} -> complete`);
+      console.warn(
+        `[render] report ${report.id} -> complete (pdf=${pdfWritten ? 'yes' : 'no'}, pages=${pageCount})`,
+      );
       return {
         status: 'complete',
         htmlS3Key: htmlKey,
-        pdfS3Key: pdf ? pdfKey : undefined,
+        ...(pdfWritten ? { pdfS3Key: pdfKey } : {}),
         pageCount,
       };
     },
@@ -212,3 +271,5 @@ export const startRenderWorker = (): Worker<RenderJob, RenderResult> => {
   });
   return worker;
 };
+
+export const __testing = { countPdfPages, renderTemplate };
