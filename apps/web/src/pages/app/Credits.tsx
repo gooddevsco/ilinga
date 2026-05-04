@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react';
 import {
-  Badge,
   Button,
   Card,
-  CardBody,
-  CardHeader,
+  Eyebrow,
   Field,
+  Icons,
   Input,
   Modal,
+  ProgressBar,
   Skeleton,
+  Tag,
+  Toggle,
+  cn,
   useToast,
 } from '@ilinga/ui';
 import { api, type ApiError } from '../../lib/api';
@@ -41,10 +44,10 @@ interface Invoice {
 }
 
 const PACKS = [
-  { code: 'pack100', label: '100 credits' },
-  { code: 'pack500', label: '500 credits' },
-  { code: 'pack2k', label: '2,000 credits' },
-  { code: 'pack10k', label: '10,000 credits' },
+  { code: 'pack100', label: '100', credits: 100, usd: 12 },
+  { code: 'pack500', label: '500', credits: 500, usd: 49 },
+  { code: 'pack2k', label: '2,000', credits: 2000, usd: 179 },
+  { code: 'pack10k', label: '10,000', credits: 10000, usd: 799 },
 ] as const;
 
 export const Credits = (): JSX.Element => {
@@ -87,8 +90,7 @@ export const Credits = (): JSX.Element => {
 
   useEffect(refresh, [current]);
 
-  if (!current)
-    return <p className="text-sm text-[color:var(--color-fg-muted)]">No workspace.</p>;
+  if (!current) return <p className="text-[13px] text-[color:var(--ink-mute)]">No workspace.</p>;
 
   const submitTopup = async (): Promise<void> => {
     try {
@@ -110,156 +112,234 @@ export const Credits = (): JSX.Element => {
     }
   };
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Credits</h1>
-        <p className="text-sm text-[color:var(--color-fg-muted)]">
-          Spend on synthesis pipelines and report renders. Plan allowance resets monthly; top-ups
-          never expire.
-        </p>
-      </div>
+  const cap = 500;
+  const pct = balance == null ? 0 : Math.min(100, Math.max(0, (balance / cap) * 100));
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader>Balance</CardHeader>
-          <CardBody>
-            {balance === null ? (
-              <Skeleton width={80} height={36} />
-            ) : (
-              <p className="text-3xl font-semibold">{balance}</p>
-            )}
-            <p className="mt-1 text-xs text-[color:var(--color-fg-subtle)]">
-              {current.displayName}
+  const burnPerWeek = ledger
+    ? Math.abs(
+        ledger
+          .filter(
+            (e) => e.delta < 0 && new Date(e.createdAt).getTime() > Date.now() - 7 * 86_400_000,
+          )
+          .reduce((a, e) => a + e.delta, 0),
+      )
+    : 0;
+
+  return (
+    <div className="flex flex-col gap-6">
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <Eyebrow>Credits & billing</Eyebrow>
+          <h1
+            className="serif mt-1 text-[28px] tracking-tight"
+            style={{ fontWeight: 500, letterSpacing: '-0.02em' }}
+          >
+            Spend, track, top up.
+          </h1>
+        </div>
+      </header>
+
+      {/* Hero balance card */}
+      <Card
+        className="r-credits-balance grid gap-7 p-7"
+        style={{ gridTemplateColumns: '1.4fr 1fr' }}
+      >
+        <div>
+          <Eyebrow>Balance</Eyebrow>
+          {balance === null ? (
+            <Skeleton width={140} height={64} className="mt-3" />
+          ) : (
+            <div
+              className="mono mt-2 flex items-baseline gap-3"
+              style={{ fontSize: 64, letterSpacing: '-0.03em', fontWeight: 500 }}
+            >
+              <span style={{ color: 'var(--signal)' }}>{balance}</span>
+              <span style={{ fontSize: 16, color: 'var(--ink-faint)' }}>/ {cap} CR</span>
+            </div>
+          )}
+          <ProgressBar value={pct} ariaLabel="Credit balance" className="mt-4" />
+          <div className="mono mt-3 flex flex-wrap gap-5 text-[11px] uppercase tracking-[0.10em] text-[color:var(--ink-faint)]">
+            <span>{current.displayName.toUpperCase()}</span>
+            <span>·</span>
+            <span>BURN ~{burnPerWeek} CR / 7 DAYS</span>
+            <span>·</span>
+            <span>RESETS MONTHLY</span>
+          </div>
+        </div>
+        <div className="flex flex-col gap-3">
+          <Eyebrow>Auto top-up</Eyebrow>
+          {config && config.enabled ? (
+            <p className="text-[13px]" style={{ lineHeight: 1.6 }}>
+              When balance falls below{' '}
+              <span className="mono" style={{ color: 'var(--signal)' }}>
+                {config.thresholdCredits}
+              </span>
+              , charge <span className="mono">{config.packCode}</span>. Cap{' '}
+              <span className="mono">
+                {config.monthlyCapCents ? formatMoney(config.monthlyCapCents) : 'no cap'}
+              </span>{' '}
+              per period.
             </p>
-          </CardBody>
-        </Card>
-        <Card>
-          <CardHeader>Auto top-up</CardHeader>
-          <CardBody>
-            {config && config.enabled ? (
-              <p className="text-sm">
-                When balance falls below <strong>{config.thresholdCredits}</strong>, charge{' '}
-                <strong>{config.packCode}</strong>. Cap{' '}
-                {config.monthlyCapCents
-                  ? formatMoney(config.monthlyCapCents)
-                  : 'no cap'}{' '}
-                per period.
-              </p>
-            ) : (
-              <p className="text-sm text-[color:var(--color-fg-muted)]">Off</p>
-            )}
-            <Button className="mt-3" onClick={() => setEditOpen(true)}>
+          ) : (
+            <p className="text-[13px] text-[color:var(--ink-mute)]">
+              Auto top-up is off. Configure to keep workflows uninterrupted.
+            </p>
+          )}
+          <div className="flex gap-2">
+            <Button variant="secondary" size="sm" type="button" onClick={() => setEditOpen(true)}>
               Configure
             </Button>
-          </CardBody>
-        </Card>
-        <Card>
-          <CardHeader>Top up now</CardHeader>
-          <CardBody>
-            <div className="flex flex-wrap gap-2">
-              {PACKS.map((p) => (
-                <Button
-                  key={p.code}
-                  size="sm"
-                  variant="secondary"
-                  onClick={async () => {
-                    try {
-                      const r = await api.post<{ url: string }>(
-                        `/v1/billing/tenant/${current.id}/topup/checkout`,
-                        { packCode: p.code },
-                      );
-                      window.location.assign(r.url);
-                    } catch {
-                      toast.push({ variant: 'error', title: 'Checkout failed' });
-                    }
-                  }}
-                >
-                  {p.label}
-                </Button>
-              ))}
+            {config && config.enabled && (
+              <Tag tone="green" dot>
+                ON
+              </Tag>
+            )}
+          </div>
+        </div>
+      </Card>
+
+      {/* Top-up packs */}
+      <section>
+        <Eyebrow>Top up now</Eyebrow>
+        <div
+          className="r-cards-4 mt-3 grid gap-4"
+          style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}
+        >
+          {PACKS.map((p, i) => (
+            <Card
+              key={p.code}
+              className={cn('flex flex-col gap-2 p-5', i === 1 && 'border-[color:var(--signal)]')}
+              style={i === 1 ? { borderColor: 'var(--signal)' } : undefined}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[18px]" style={{ fontWeight: 500 }}>
+                  {p.label} CR
+                </span>
+                {i === 1 && <Tag tone="signal">POPULAR</Tag>}
+              </div>
+              <div className="mono" style={{ fontSize: 28, color: 'var(--ink)', fontWeight: 500 }}>
+                ${p.usd}
+              </div>
+              <div className="mono text-[11px] uppercase tracking-[0.10em] text-[color:var(--ink-faint)]">
+                ${(p.usd / p.credits).toFixed(3)} / CR
+              </div>
+              <Button
+                variant={i === 1 ? 'primary' : 'secondary'}
+                size="sm"
+                type="button"
+                onClick={async () => {
+                  try {
+                    const r = await api.post<{ url: string }>(
+                      `/v1/billing/tenant/${current.id}/topup/checkout`,
+                      { packCode: p.code },
+                    );
+                    window.location.assign(r.url);
+                  } catch {
+                    toast.push({ variant: 'error', title: 'Checkout failed' });
+                  }
+                }}
+              >
+                <Icons.card /> Checkout
+              </Button>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      {/* Ledger */}
+      <section>
+        <Eyebrow>Recent ledger</Eyebrow>
+        <Card className="mt-3 overflow-hidden">
+          {ledger === null && (
+            <div className="p-5">
+              <Skeleton height={120} />
             </div>
-          </CardBody>
-        </Card>
-      </section>
-
-      <section>
-        <h2 className="mb-2 text-sm font-semibold">Recent ledger</h2>
-        <Card>
-          <CardBody>
-            {ledger === null && <Skeleton height={120} />}
-            {ledger && ledger.length === 0 && (
-              <p className="text-sm text-[color:var(--color-fg-muted)]">No spend yet.</p>
-            )}
-            {ledger && ledger.length > 0 && (
-              <table className="w-full text-sm">
-                <thead className="text-left text-xs uppercase tracking-wide text-[color:var(--color-fg-subtle)]">
-                  <tr>
-                    <th className="py-2">When</th>
-                    <th className="py-2">Reason</th>
-                    <th className="py-2 text-right">Δ</th>
-                    <th className="py-2 text-right">Balance after</th>
+          )}
+          {ledger && ledger.length === 0 && (
+            <p className="px-5 py-8 text-center text-[13px] text-[color:var(--ink-mute)]">
+              No spend yet — your first synthesis run lands here.
+            </p>
+          )}
+          {ledger && ledger.length > 0 && (
+            <table className="cmp">
+              <thead>
+                <tr>
+                  <th>When</th>
+                  <th>Reason</th>
+                  <th className="text-right">Δ</th>
+                  <th className="text-right">Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ledger.slice(0, 20).map((e) => (
+                  <tr key={e.id}>
+                    <td className="mono text-[color:var(--ink-mute)]">
+                      {formatDateTZ(e.createdAt, 'UTC')}
+                    </td>
+                    <td>{e.reason}</td>
+                    <td
+                      className="mono text-right"
+                      style={{
+                        color: e.delta < 0 ? 'var(--danger)' : 'var(--green)',
+                      }}
+                    >
+                      {e.delta > 0 ? `+${e.delta}` : e.delta}
+                    </td>
+                    <td className="mono text-right">{e.balanceAfter}</td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-[color:var(--color-border)]">
-                  {ledger.slice(0, 20).map((e) => (
-                    <tr key={e.id}>
-                      <td className="py-2 text-xs text-[color:var(--color-fg-muted)]">
-                        {formatDateTZ(e.createdAt, 'UTC')}
-                      </td>
-                      <td className="py-2">{e.reason}</td>
-                      <td
-                        className={`py-2 text-right font-mono ${
-                          e.delta < 0 ? 'text-[color:var(--color-danger)]' : 'text-[color:var(--color-success)]'
-                        }`}
-                      >
-                        {e.delta > 0 ? `+${e.delta}` : e.delta}
-                      </td>
-                      <td className="py-2 text-right font-mono">{e.balanceAfter}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </CardBody>
+                ))}
+              </tbody>
+            </table>
+          )}
         </Card>
       </section>
 
+      {/* Invoices */}
       <section>
-        <h2 className="mb-2 text-sm font-semibold">Invoices</h2>
-        <Card>
-          <CardBody>
-            {invoices === null && <Skeleton height={80} />}
-            {invoices && invoices.length === 0 && (
-              <p className="text-sm text-[color:var(--color-fg-muted)]">No invoices yet.</p>
-            )}
-            {invoices && invoices.length > 0 && (
-              <ul className="space-y-1 text-sm">
-                {invoices.map((inv) => (
-                  <li
-                    key={inv.id}
-                    className="flex flex-wrap items-center justify-between gap-2 border-b border-[color:var(--color-border)] py-2 last:border-0"
-                  >
-                    <span>
-                      {formatDateTZ(inv.issuedAt, 'UTC')} —{' '}
-                      <strong>{formatMoney(inv.amountCents, inv.currency)}</strong>{' '}
-                      <Badge tone={inv.status === 'paid' ? 'success' : 'warning'}>
-                        {inv.status}
-                      </Badge>
+        <Eyebrow>Invoices</Eyebrow>
+        <Card className="mt-3 overflow-hidden">
+          {invoices === null && (
+            <div className="p-5">
+              <Skeleton height={80} />
+            </div>
+          )}
+          {invoices && invoices.length === 0 && (
+            <p className="px-5 py-6 text-center text-[13px] text-[color:var(--ink-mute)]">
+              No invoices yet.
+            </p>
+          )}
+          {invoices && invoices.length > 0 && (
+            <ul className="divide-y divide-[color:var(--line)]">
+              {invoices.map((inv) => (
+                <li
+                  key={inv.id}
+                  className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-[13px]"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="mono text-[12px] text-[color:var(--ink-mute)]">
+                      {formatDateTZ(inv.issuedAt, 'UTC')}
                     </span>
-                    {inv.pdfS3Key && (
-                      <a
-                        className="underline"
-                        href={`/api-proxy/${encodeURIComponent(inv.pdfS3Key)}`}
-                      >
-                        Download PDF
-                      </a>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardBody>
+                    <span style={{ fontWeight: 500 }}>
+                      {formatMoney(inv.amountCents, inv.currency)}
+                    </span>
+                    <Tag tone={inv.status === 'paid' ? 'green' : 'ochre'}>
+                      {inv.status.toUpperCase()}
+                    </Tag>
+                  </div>
+                  {inv.pdfS3Key && (
+                    <a
+                      href={`/api-proxy/${encodeURIComponent(inv.pdfS3Key)}`}
+                      className="inline-flex"
+                    >
+                      <Button variant="ghost" size="sm" type="button">
+                        <Icons.download /> PDF
+                      </Button>
+                    </a>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
         </Card>
       </section>
 
@@ -276,36 +356,41 @@ export const Credits = (): JSX.Element => {
           </>
         }
       >
-        <div className="space-y-3">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-[14px]" style={{ fontWeight: 500 }}>
+                Enable auto top-up
+              </div>
+              <div className="text-[12px] text-[color:var(--ink-mute)]">
+                Charges a credit pack when balance dips below the threshold.
+              </div>
+            </div>
+            <Toggle
               checked={form.enabled}
-              onChange={(e) => setForm({ ...form, enabled: e.target.checked })}
+              ariaLabel="Enable auto top-up"
+              onChange={(v) => setForm({ ...form, enabled: v })}
             />
-            Enable auto top-up
-          </label>
+          </div>
           <Field label="Trigger when balance falls below" htmlFor="t-th">
             <Input
               id="t-th"
               type="number"
               min={1}
               value={form.thresholdCredits}
-              onChange={(e) =>
-                setForm({ ...form, thresholdCredits: Number(e.target.value) })
-              }
+              onChange={(e) => setForm({ ...form, thresholdCredits: Number(e.target.value) })}
             />
           </Field>
           <Field label="Pack to charge" htmlFor="t-pk">
             <select
               id="t-pk"
+              className="select"
               value={form.packCode}
               onChange={(e) => setForm({ ...form, packCode: e.target.value })}
-              className="block h-10 w-full rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 text-sm"
             >
               {PACKS.map((p) => (
                 <option key={p.code} value={p.code}>
-                  {p.label}
+                  {p.label} credits — ${p.usd}
                 </option>
               ))}
             </select>

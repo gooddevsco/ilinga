@@ -73,8 +73,13 @@ authRoutes.post(
         html: tpl.html,
         text: tpl.text,
       });
-    } catch {
-      // anti-enumeration: still 200; error logged by middleware
+    } catch (err) {
+      // anti-enumeration: still 200, but we DO log so dev can see why an
+      // email never landed (Mailpit down, SMTP misconfigured, etc.).
+      (c.get('logger') as ReturnType<typeof import('../lib/logger.js').logger>)?.warn(
+        { err: { message: (err as Error).message } },
+        'magic-link request failed (silent)',
+      );
     }
     return c.json({ ok: true });
   },
@@ -120,10 +125,7 @@ const OAUTH_STATE_COOKIE = 'il_oauth_state';
 authRoutes.get('/google/start', (c) => {
   const cfg = config();
   if (!cfg.GOOGLE_OAUTH_CLIENT_ID) {
-    return c.json(
-      { type: 'about:blank', title: 'Google OAuth not configured', status: 503 },
-      503,
-    );
+    return c.json({ type: 'about:blank', title: 'Google OAuth not configured', status: 503 }, 503);
   }
   const built = buildGoogleAuthUrl();
   setCookie(

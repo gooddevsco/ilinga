@@ -1,7 +1,36 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Button, Eyebrow } from '@ilinga/ui';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
+
+const Status = ({
+  eyebrow,
+  title,
+  body,
+  spinner,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  body?: string;
+  spinner?: boolean;
+  children?: React.ReactNode;
+}): JSX.Element => (
+  <div className="fade-up flex w-full max-w-[440px] flex-col gap-5">
+    <Eyebrow>{eyebrow}</Eyebrow>
+    <h1 className="serif text-[36px] tracking-tight" style={{ fontWeight: 500, lineHeight: 1.05 }}>
+      {title}
+    </h1>
+    {spinner && (
+      <div className="flex items-center gap-2 text-[13px] text-[color:var(--ink-mute)]">
+        <span className="spinner" /> Signing you in…
+      </div>
+    )}
+    {body && <p className="text-[14px] text-[color:var(--ink-mute)]">{body}</p>}
+    {children}
+  </div>
+);
 
 export const MagicCallback = (): JSX.Element => {
   const [params] = useSearchParams();
@@ -32,17 +61,24 @@ export const MagicCallback = (): JSX.Element => {
 
   if (error) {
     return (
-      <div className="mx-auto max-w-md py-16">
-        <h1 className="text-2xl font-semibold">Sign-in failed</h1>
-        <p className="mt-3 text-sm text-[color:var(--color-fg-muted)]">{error}</p>
-      </div>
+      <Status eyebrow="Sign-in failed" title="That didn't work." body={error}>
+        <div className="flex gap-2">
+          <Link to="/sign-in">
+            <Button variant="primary" type="button">
+              Try again
+            </Button>
+          </Link>
+          <Link to="/help/contact">
+            <Button variant="ghost" type="button">
+              Contact support
+            </Button>
+          </Link>
+        </div>
+      </Status>
     );
   }
-  return (
-    <div className="mx-auto max-w-md py-16 text-sm text-[color:var(--color-fg-muted)]">
-      Signing you in…
-    </div>
-  );
+
+  return <Status eyebrow="Verifying" title="One moment…" spinner />;
 };
 
 export const GoogleCallback = (): JSX.Element => {
@@ -51,9 +87,5 @@ export const GoogleCallback = (): JSX.Element => {
   useEffect(() => {
     void refresh().then(() => navigate('/dashboard', { replace: true }));
   }, [refresh, navigate]);
-  return (
-    <div className="mx-auto max-w-md py-16 text-sm text-[color:var(--color-fg-muted)]">
-      Finishing sign-in…
-    </div>
-  );
+  return <Status eyebrow="Verifying" title="Finishing sign-in…" spinner />;
 };

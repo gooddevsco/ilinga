@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+import './env-bootstrap.js';
 import { startScanWorker } from './scan.js';
 import { startRenderWorker } from './render.js';
 import { startRetentionWorker, sweepDueDeletions } from './retention.js';

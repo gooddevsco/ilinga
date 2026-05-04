@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Button, Card, CardBody, CardHeader, useToast } from '@ilinga/ui';
+import { Button, Card, Eyebrow, Icons, Tag, Textarea, useToast } from '@ilinga/ui';
 import { api } from '../../lib/api';
 import { useTenant } from '../../lib/tenant';
 import { AgentStream } from '../../features/synthesis/AgentStream';
@@ -14,6 +14,15 @@ const DEFAULT_STAGES: Stage[] = [
   { code: 'gtm.icp', cluster: 'GTM', label: 'Ideal customer profile' },
 ];
 
+const stripeStages = [
+  { code: 'parse', label: 'Parse', sub: 'Read brief + answers' },
+  { code: 'cluster', label: 'Cluster', sub: 'Map to interview clusters' },
+  { code: 'fanout', label: 'Fan out', sub: 'Spawn module prompts' },
+  { code: 'synth', label: 'Synthesise', sub: 'Generate module bodies' },
+  { code: 'reduce', label: 'Reduce', sub: 'Pick best candidates' },
+  { code: 'commit', label: 'Commit', sub: 'Lock keys for render' },
+];
+
 export const Synthesis = (): JSX.Element => {
   const { vid, cid } = useParams<{ vid: string; cid: string }>();
   const { current } = useTenant();
@@ -23,7 +32,7 @@ export const Synthesis = (): JSX.Element => {
   usePresenceBeacon(cid, 'synthesis');
 
   if (!current || !vid || !cid) {
-    return <p className="text-sm text-[color:var(--color-fg-muted)]">No workspace selected.</p>;
+    return <p className="text-[13px] text-[color:var(--ink-mute)]">No workspace selected.</p>;
   }
 
   const start = async (): Promise<void> => {
@@ -56,53 +65,101 @@ export const Synthesis = (): JSX.Element => {
   };
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
+    <div className="flex flex-col gap-6">
+      <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <Link to={`/ventures/${vid}`} className="text-xs text-[color:var(--color-fg-muted)]">
+          <Link
+            to={`/ventures/${vid}`}
+            className="mono text-[11px] uppercase tracking-[0.10em] text-[color:var(--ink-faint)] hover:text-[color:var(--ink)]"
+          >
             ← Venture
           </Link>
-          <h1 className="text-2xl font-semibold tracking-tight">Synthesis</h1>
+          <h1
+            className="serif mt-1 text-[28px] tracking-tight"
+            style={{ fontWeight: 500, letterSpacing: '-0.02em' }}
+          >
+            Synthesis pipeline
+          </h1>
         </div>
-        <PresenceDots cycleId={cid} />
-        <div className="flex gap-2">
-          <Button onClick={start} loading={running} disabled={running}>
-            Run synthesis
+        <div className="flex flex-wrap items-center gap-3">
+          <PresenceDots cycleId={cid} />
+          <Button
+            variant="primary"
+            type="button"
+            loading={running}
+            disabled={running}
+            onClick={start}
+          >
+            <Icons.spark /> Run synthesis
           </Button>
-          <Button variant="secondary" onClick={cancel}>
+          <Button variant="secondary" type="button" onClick={cancel}>
             Cancel
           </Button>
-          <Link
-            to={`/ventures/${vid}/cycles/${cid}/reports`}
-            className="inline-flex h-10 items-center rounded-md border border-[color:var(--color-border)] px-4 text-sm"
-          >
-            Reports
+          <Link to={`/ventures/${vid}/cycles/${cid}/reports`}>
+            <Button variant="ghost" type="button">
+              Reports
+            </Button>
           </Link>
         </div>
       </header>
 
-      <Card>
-        <CardHeader>Brief context</CardHeader>
-        <CardBody>
-          <textarea
-            value={briefText}
-            onChange={(e) => setBriefText(e.target.value)}
-            rows={4}
-            placeholder="Paste in the latest brief or notes; the agents fold this in alongside interview answers."
-            className="block w-full rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-bg)] p-3 text-sm"
-          />
-        </CardBody>
+      {/* Pipeline strip */}
+      <Card className="p-5">
+        <Eyebrow>Pipeline</Eyebrow>
+        <div
+          className="r-synth-stages mt-4 grid gap-2"
+          style={{ gridTemplateColumns: `repeat(${stripeStages.length}, 1fr)` }}
+        >
+          {stripeStages.map((s, i) => (
+            <div
+              key={s.code}
+              className="rounded-md border border-[color:var(--line)] bg-[color:var(--bg-1)] p-3"
+            >
+              <div className="flex items-center justify-between">
+                <span className="mono text-[11px]" style={{ color: 'var(--signal)' }}>
+                  0{i + 1}
+                </span>
+                <Tag>{i === 0 ? 'READY' : 'IDLE'}</Tag>
+              </div>
+              <div className="mt-2 text-[13px]" style={{ fontWeight: 500 }}>
+                {s.label}
+              </div>
+              <div className="mono mt-1 text-[10px] uppercase tracking-[0.10em] text-[color:var(--ink-faint)]">
+                {s.sub}
+              </div>
+            </div>
+          ))}
+        </div>
       </Card>
 
-      <section className="grid gap-4 lg:grid-cols-2">
-        <div>
-          <h2 className="mb-2 text-sm font-semibold">Pipeline</h2>
-          <PipelineGraph cycleId={cid} stages={DEFAULT_STAGES} />
-        </div>
-        <div className="h-[420px]">
-          <h2 className="mb-2 text-sm font-semibold">Live agent stream</h2>
-          <AgentStream cycleId={cid} />
-        </div>
+      <Card className="p-5">
+        <Eyebrow>Brief context</Eyebrow>
+        <p className="mt-1 text-[13px] text-[color:var(--ink-mute)]">
+          The agent reads this in addition to your interview answers. Paste any extra context the
+          team wrote up — strategy memos, links, raw notes.
+        </p>
+        <Textarea
+          className="mt-3"
+          rows={5}
+          value={briefText}
+          onChange={(e) => setBriefText(e.target.value)}
+          placeholder="Paste in the latest brief or notes; the agents fold this in alongside interview answers."
+        />
+      </Card>
+
+      <section className="r-2col grid gap-4" style={{ gridTemplateColumns: '1fr 1fr' }}>
+        <Card className="p-5">
+          <Eyebrow>Stage map</Eyebrow>
+          <div className="mt-3">
+            <PipelineGraph cycleId={cid} stages={DEFAULT_STAGES} />
+          </div>
+        </Card>
+        <Card className="p-5" style={{ minHeight: 460 }}>
+          <Eyebrow>Live agent stream</Eyebrow>
+          <div className="mt-3 h-[420px]">
+            <AgentStream cycleId={cid} />
+          </div>
+        </Card>
       </section>
     </div>
   );

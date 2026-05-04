@@ -3,7 +3,7 @@ import { cors } from 'hono/cors';
 import { config } from './config.js';
 import {
   accessLogMiddleware,
-  errorBoundaryMiddleware,
+  onErrorHandler,
   requestIdMiddleware,
   securityHeadersMiddleware,
 } from './lib/middleware.js';
@@ -35,8 +35,8 @@ export const buildApp = () => {
 
   app.use('*', requestIdMiddleware);
   app.use('*', accessLogMiddleware);
-  app.use('*', errorBoundaryMiddleware);
   app.use('*', securityHeadersMiddleware);
+  app.onError(onErrorHandler);
   app.use(
     '*',
     cors({

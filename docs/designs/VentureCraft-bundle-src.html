@@ -1,0 +1,3116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>VentureCraft</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+/* VentureCraft — Linear/Vercel modernist */
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --bg: #0A0A0B;
+  --bg-1: #111113;
+  --bg-2: #18181B;
+  --bg-3: #1F1F23;
+  --paper: #F4F4F1;
+  --paper-1: #ECECE7;
+  --paper-2: #E2E2DC;
+  --ink: #0A0A0B;
+  --ink-2: #2A2A2E;
+  --ink-mute: #6B6B70;
+  --ink-faint: #9A9A9F;
+  --line: rgba(255,255,255,0.08);
+  --line-2: rgba(255,255,255,0.14);
+  --line-paper: rgba(10,10,11,0.10);
+  --line-paper-2: rgba(10,10,11,0.18);
+  --signal: oklch(0.86 0.18 130);
+  --signal-ink: oklch(0.32 0.10 130);
+  --signal-soft: oklch(0.86 0.18 130 / 0.15);
+  --warn: oklch(0.78 0.16 70);
+  --danger: oklch(0.65 0.20 25);
+  --radius: 6px;
+  --radius-lg: 10px;
+  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --sans: 'Inter Tight', ui-sans-serif, system-ui, -apple-system, Helvetica, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--paper);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "ss01", "cv11";
+  font-size: 14px;
+  line-height: 1.5;
+}
+button { font-family: inherit; cursor: pointer; border: 0; background: none; color: inherit; padding: 0; }
+input, textarea, select { font-family: inherit; color: inherit; }
+a { color: inherit; text-decoration: none; }
+
+.mono { font-family: var(--mono); font-variant-ligatures: none; }
+.kbd {
+  font-family: var(--mono); font-size: 11px;
+  padding: 2px 6px; border: 1px solid var(--line); border-radius: 4px;
+  background: var(--bg-2); color: var(--ink-faint);
+}
+
+/* utility */
+.eyebrow {
+  font-family: var(--mono); font-size: 11px;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.eyebrow.on-paper { color: var(--ink-mute); }
+.divider { height: 1px; background: var(--line); }
+.divider-paper { height: 1px; background: var(--line-paper); }
+
+/* buttons */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 14px; height: 34px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-size: 13px; font-weight: 500;
+  background: var(--bg-2); color: var(--paper);
+  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+}
+.btn:hover { background: var(--bg-3); border-color: var(--line-2); }
+.btn:active { transform: translateY(1px); }
+.btn.primary {
+  background: var(--signal); color: var(--signal-ink);
+  border-color: var(--signal);
+  font-weight: 600;
+}
+.btn.primary:hover { filter: brightness(1.05); }
+.btn.ghost { background: transparent; }
+.btn.sm { height: 28px; padding: 4px 10px; font-size: 12px; }
+.btn.lg { height: 42px; padding: 10px 18px; font-size: 14px; }
+
+.btn.on-paper { background: white; color: var(--ink); border-color: var(--line-paper); }
+.btn.on-paper:hover { background: var(--paper-1); }
+.btn.primary.on-paper { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+/* tag / chip */
+.tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 8px; border: 1px solid var(--line);
+  border-radius: 4px;
+  font-family: var(--mono); font-size: 11px;
+  color: var(--ink-faint); background: var(--bg-2);
+}
+.tag.signal { color: var(--signal); border-color: color-mix(in oklch, var(--signal) 35%, transparent); background: var(--signal-soft); }
+.tag.on-paper { background: white; color: var(--ink-mute); border-color: var(--line-paper); }
+.tag .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+/* surface card */
+.card {
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+.card.paper { background: white; border-color: var(--line-paper); color: var(--ink); }
+
+/* form */
+.field-label {
+  display: block;
+  font-family: var(--mono); font-size: 11px;
+  letter-spacing: 0.10em; text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 8px;
+}
+.input, .textarea, .select {
+  width: 100%;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--paper);
+  transition: border-color 120ms ease, background 120ms ease;
+}
+.input:focus, .textarea:focus, .select:focus {
+  outline: none;
+  border-color: var(--signal);
+  background: var(--bg-3);
+}
+.textarea { min-height: 96px; resize: vertical; line-height: 1.55; }
+
+.input.on-paper, .textarea.on-paper, .select.on-paper {
+  background: white; color: var(--ink); border-color: var(--line-paper);
+}
+.input.on-paper:focus, .textarea.on-paper:focus { border-color: var(--ink); background: white; }
+
+/* progress */
+.bar { height: 4px; background: var(--bg-3); border-radius: 2px; overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--signal); }
+
+/* scrollbars */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.16); }
+::-webkit-scrollbar-track { background: transparent; }
+.on-paper-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); }
+
+/* hairline grid texture used sparingly */
+.grid-bg {
+  background-image:
+    linear-gradient(to right, var(--line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--line) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
+.grid-bg-paper {
+  background-image:
+    linear-gradient(to right, rgba(10,10,11,0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(10,10,11,0.06) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
+
+/* placeholder image */
+.placeholder {
+  background:
+    repeating-linear-gradient(135deg, rgba(255,255,255,0.04) 0 8px, transparent 8px 16px),
+    var(--bg-2);
+  border: 1px dashed var(--line-2);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 11px; color: var(--ink-faint);
+  letter-spacing: 0.08em; text-transform: uppercase;
+  border-radius: var(--radius);
+}
+.placeholder.on-paper {
+  background:
+    repeating-linear-gradient(135deg, rgba(0,0,0,0.04) 0 8px, transparent 8px 16px),
+    white;
+  border-color: var(--line-paper-2);
+  color: var(--ink-mute);
+}
+
+/* subtle blink for active dot */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.pulse { animation: pulse 1.6s ease-in-out infinite; }
+
+/* shake for invalid */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+/* fade up */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 240ms cubic-bezier(.2,.8,.2,1) both; }
+
+/* sidebar nav item */
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 10px; border-radius: 5px;
+  color: var(--ink-faint); font-size: 13px;
+  cursor: pointer;
+  transition: background 100ms ease, color 100ms ease;
+}
+.nav-item:hover { background: var(--bg-2); color: var(--paper); }
+.nav-item.active { background: var(--bg-2); color: var(--paper); }
+.nav-item .ico { width: 14px; height: 14px; opacity: 0.8; }
+.nav-section {
+  font-family: var(--mono); font-size: 10px;
+  text-transform: uppercase; letter-spacing: 0.12em;
+  color: var(--ink-faint);
+  padding: 14px 10px 6px;
+}
+
+/* progress map (left column) */
+.cluster-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.cluster-row:hover { background: var(--bg-2); }
+.cluster-row.active { background: var(--bg-2); border-color: var(--line-2); }
+.cluster-row .num {
+  font-family: var(--mono); font-size: 11px; color: var(--ink-faint);
+  width: 22px;
+}
+.cluster-row .ring {
+  --p: 0;
+  width: 16px; height: 16px; border-radius: 50%;
+  background:
+    conic-gradient(var(--signal) calc(var(--p) * 1%), var(--bg-3) 0);
+  position: relative;
+}
+.cluster-row .ring::after {
+  content: '';
+  position: absolute; inset: 3px;
+  border-radius: 50%; background: var(--bg-1);
+}
+.cluster-row.done .ring {
+  background: var(--signal);
+}
+.cluster-row.done .ring::after { background: var(--signal); }
+
+/* sleek table */
+table.cmp { width: 100%; border-collapse: collapse; }
+table.cmp th, table.cmp td {
+  text-align: left;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+table.cmp th {
+  font-family: var(--mono); font-size: 11px;
+  text-transform: uppercase; letter-spacing: 0.10em;
+  color: var(--ink-faint); font-weight: 500;
+}
+.cmp.paper th, .cmp.paper td { border-bottom-color: var(--line-paper); }
+.cmp.paper th { color: var(--ink-mute); }
+
+/* sparkline-like bars */
+.bars { display: flex; gap: 2px; align-items: flex-end; height: 22px; }
+.bars i {
+  display: block; width: 4px; background: var(--ink-faint); border-radius: 1px;
+}
+.bars i.hi { background: var(--signal); }
+
+/* ======================================================
+   Responsive layer
+   - desktop default keeps all inline grids
+   - tablet (≤1100): 2-col / collapse rails
+   - mobile (≤760): single column, drawer nav, slim paddings
+   ====================================================== */
+
+/* Hooks added in JSX:
+   .r-app-shell        → sidebar + main grid
+   .r-sidebar          → desktop sidebar
+   .r-mobile-topbar    → mobile-only header w/ menu button (hidden ≥ tablet)
+   .r-drawer           → drawer overlay (mobile only when open)
+   .r-2col, .r-3col    → general grid wrappers that collapse
+   .r-pricing-grid     → 4-col pricing, becomes 2 then 1
+   .r-cards-3, .r-cards-4
+   .r-split            → 1fr 1fr signup-style splits
+   .r-interview-grid   → 320 1fr 360 → 1fr at mobile
+   .r-reports-detail   → 1fr 320 → stack
+   .r-outputs-grid     → 300 1fr → drawer
+   .r-onboard-body     → 1fr 380 → stack
+   .r-settings-grid    → 220 1fr → stack with select nav
+   .r-pad              → page padding
+*/
+
+.r-mobile-topbar { display: none; }
+.r-drawer { display: none; }
+.r-mobile-only { display: none !important; }
+
+@media (max-width: 1180px) {
+  .r-3col { grid-template-columns: 1fr 1fr !important; }
+  .r-cards-4 { grid-template-columns: repeat(2, 1fr) !important; }
+  .r-cards-3 { grid-template-columns: repeat(2, 1fr) !important; }
+  .r-pricing-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .r-interview-grid { grid-template-columns: 280px 1fr !important; }
+  .r-interview-grid > .r-interview-rail { display: none !important; }
+  .r-outputs-grid { grid-template-columns: 260px 1fr !important; }
+  .r-onboard-body { grid-template-columns: 1fr !important; }
+  .r-onboard-rail { border-left: none !important; border-top: 1px solid var(--line); }
+  .r-pad { padding: 22px !important; }
+}
+
+@media (max-width: 860px) {
+  .r-2col, .r-3col, .r-split, .r-cards-3, .r-cards-4, .r-pricing-grid,
+  .r-onboard-body, .r-reports-detail, .r-credits-balance,
+  .r-2col-stat, .r-2col-form { grid-template-columns: 1fr !important; }
+
+  .r-interview-grid, .r-outputs-grid, .r-settings-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* hide the desktop sidebar; show topbar + drawer */
+  .r-sidebar { display: none !important; }
+  .r-app-shell { grid-template-columns: 1fr !important; }
+  .r-mobile-topbar { display: flex !important; }
+  .r-mobile-hide { display: none !important; }
+  .r-mobile-only { display: flex !important; }
+
+  /* reduce paddings */
+  .r-pad { padding: 16px !important; }
+  .r-pad-lg { padding: 24px 16px !important; }
+  .r-pad-xl { padding: 40px 18px !important; }
+
+  /* shrink display headings */
+  .r-h-display { font-size: 40px !important; line-height: 1.05 !important; }
+  .r-h-1 { font-size: 28px !important; }
+  .r-h-2 { font-size: 22px !important; }
+
+  /* rails / side panels collapse */
+  .r-side-rail { display: none !important; }
+  .r-side-rail.r-mobile-show { display: block !important; }
+
+  /* nav becomes scroll row */
+  .r-nav-row { overflow-x: auto !important; flex-wrap: nowrap !important; }
+  .r-nav-row::-webkit-scrollbar { height: 0; }
+
+  /* tables go horizontal scroll */
+  .r-table-wrap { overflow-x: auto; }
+  .r-table-wrap table { min-width: 640px; }
+
+  /* make max-widths fluid */
+  .r-fluid { max-width: 100% !important; width: auto !important; min-width: 0 !important; }
+  .r-fluid-input { min-width: 0 !important; width: 100% !important; }
+
+  /* stack flex rows that were horizontal */
+  .r-stack { flex-direction: column !important; align-items: stretch !important; }
+  .r-stack > * { width: 100% !important; }
+
+  /* hide chunky desktop-only cells */
+  .r-hide-mobile { display: none !important; }
+
+  /* btn shrink */
+  .btn.lg { height: 38px; padding: 8px 14px; font-size: 13px; }
+
+  /* report viewer paper */
+  .r-paper-shell { padding: 14px !important; }
+  .r-paper-page { padding: 28px !important; }
+
+  /* synthesis pipeline becomes scroll */
+  .r-synth-stages { overflow-x: auto; }
+  .r-synth-stages > div { min-width: 720px; }
+
+  /* fonts smaller in dense places */
+  .r-mono-sm { font-size: 10px !important; }
+}
+
+/* drawer */
+.r-drawer-mask {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 80; opacity: 0; pointer-events: none;
+  transition: opacity 200ms ease;
+}
+.r-drawer-mask.open { opacity: 1; pointer-events: auto; }
+.r-drawer-panel {
+  position: fixed; top: 0; left: 0; bottom: 0;
+  width: min(280px, 86vw);
+  background: var(--bg);
+  border-right: 1px solid var(--line);
+  z-index: 81;
+  transform: translateX(-100%);
+  transition: transform 220ms cubic-bezier(.2,.8,.2,1);
+  display: flex; flex-direction: column;
+  overflow: auto;
+}
+.r-drawer-panel.open { transform: translateX(0); }
+
+</style>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+  <template id="__bundler_thumbnail" data-bg-color="#0A0A0B">
+    <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+      <rect width="1200" height="800" fill="#0A0A0B" />
+      <g transform="translate(540 280)" fill="none" stroke="#C5E84B" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="0" y="0" width="120" height="120" rx="20" />
+        <path d="M28 28 L60 100 L92 28" />
+        <circle cx="60" cy="60" r="10" fill="#C5E84B" stroke="none" />
+      </g>
+      <text x="600" y="500" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="44" font-weight="500" letter-spacing="-1" fill="#F4F4F1">VentureCraft</text>
+      <text x="600" y="540" text-anchor="middle" font-family="ui-monospace, monospace" font-size="14" letter-spacing="3" fill="#9A9A9F">LOADING WORKSPACE</text>
+    </svg>
+  </template>
+  <div id="root"></div>
+<script type="text/babel" data-file="shared.jsx">
+/* global React */
+const { useState, useEffect, useMemo, useRef, createContext, useContext } = React;
+
+// ---------- Icons (1.5 stroke, 16px) ----------
+const Icon = ({ d, size = 16, fill, stroke = 'currentColor', sw = 1.5, style }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill={fill || 'none'} stroke={stroke} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" style={style}>
+    {typeof d === 'string' ? <path d={d} /> : d}
+  </svg>
+);
+
+const I = {
+  logo: (size = 18) => (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <rect x="1" y="1" width="16" height="16" rx="3" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M5 5 L9 13 L13 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="9" cy="9" r="1.6" fill="currentColor" />
+    </svg>
+  ),
+  arrow: <Icon d="M3 8h10M9 4l4 4-4 4" />,
+  arrowLeft: <Icon d="M13 8H3M7 4l-4 4 4 4" />,
+  check: <Icon d="M3 8.5 6.5 12 13 4.5" />,
+  plus: <Icon d="M8 3v10M3 8h10" />,
+  x: <Icon d="M4 4l8 8M12 4l-8 8" />,
+  search: <Icon d={<><circle cx="7" cy="7" r="4" /><path d="m13 13-2.5-2.5" /></>} />,
+  spark: <Icon d="M8 2v4M8 10v4M2 8h4M10 8h4M4 4l2.5 2.5M9.5 9.5 12 12M4 12l2.5-2.5M9.5 6.5 12 4" />,
+  lock: <Icon d={<><rect x="3" y="7" width="10" height="7" rx="1.5" /><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" /></>} />,
+  unlock: <Icon d={<><rect x="3" y="7" width="10" height="7" rx="1.5" /><path d="M5.5 7V5a2.5 2.5 0 0 1 4.5-1.5" /></>} />,
+  download: <Icon d="M8 2v9M4.5 7.5 8 11l3.5-3.5M3 14h10" />,
+  doc: <Icon d={<><path d="M4 1.5h5l3 3V14a.5.5 0 0 1-.5.5h-7A.5.5 0 0 1 4 14V2a.5.5 0 0 1 .5-.5z" /><path d="M9 1.5v3h3M6 8h4M6 10.5h4M6 5.5h1.5" /></>} />,
+  cluster: <Icon d={<><circle cx="4" cy="4" r="2" /><circle cx="12" cy="4" r="2" /><circle cx="8" cy="12" r="2" /><path d="M5.4 5.4 6.6 10.6M10.6 5.4 9.4 10.6M6 4h4" /></>} />,
+  module: <Icon d={<><rect x="2" y="2" width="5" height="5" /><rect x="9" y="2" width="5" height="5" /><rect x="2" y="9" width="5" height="5" /><rect x="9" y="9" width="5" height="5" /></>} />,
+  chart: <Icon d="M2 13h12M4 11V7M7 11V4M10 11v-3M13 11V6" />,
+  credits: <Icon d={<><circle cx="8" cy="8" r="6" /><path d="M8 5v6M5.5 8h5" /></>} />,
+  settings: <Icon d={<><circle cx="8" cy="8" r="2" /><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.5 3.5l1.4 1.4M11.1 11.1l1.4 1.4M3.5 12.5l1.4-1.4M11.1 4.9l1.4-1.4" /></>} />,
+  bell: <Icon d="M4 11V7a4 4 0 0 1 8 0v4l1 1H3l1-1zM7 14h2" />,
+  zap: <Icon d="M9 1 3 9h4l-1 6 6-8H8l1-6z" fill="currentColor" stroke="none" />,
+  user: <Icon d={<><circle cx="8" cy="5.5" r="2.5" /><path d="M3 14c.8-2.5 2.7-4 5-4s4.2 1.5 5 4" /></>} />,
+  globe: <Icon d={<><circle cx="8" cy="8" r="6" /><path d="M2 8h12M8 2c2 2 2 10 0 12M8 2c-2 2-2 10 0 12" /></>} />,
+  flag: <Icon d="M3.5 14V2M3.5 3h8l-1.5 2.5L11.5 8H3.5" />,
+  sliders: <Icon d="M3 4h6M11 4h2M3 8h2M7 8h6M3 12h8M13 12h0M9 2v4M5 6v4M11 10v4" />,
+  cycle: <Icon d="M3 8a5 5 0 0 1 9-3M13 8a5 5 0 0 1-9 3M11 2v3h3M5 14v-3H2" />,
+  upload: <Icon d="M8 11V2M4.5 5.5 8 2l3.5 3.5M3 14h10" />,
+  card: <Icon d={<><rect x="2" y="4" width="12" height="9" rx="1.5" /><path d="M2 7h12M5 11h2" /></>} />,
+  api: <Icon d="M2 8h3M11 8h3M5 8a3 3 0 0 1 6 0 3 3 0 0 1-6 0zM8 1v2M8 13v2" />,
+  external: <Icon d="M9 3h4v4M13 3 7 9M11 9v4H3V5h4" />,
+  more: <Icon d="M3 8h.01M8 8h.01M13 8h.01" sw={2.5} />,
+  menu: <Icon d="M2.5 4h11M2.5 8h11M2.5 12h11" />,
+  filter: <Icon d="M2 3h12L9.5 8.5V13L6.5 14V8.5L2 3z" />,
+  team: <Icon d={<><circle cx="6" cy="6" r="2" /><circle cx="11.5" cy="6.5" r="1.5" /><path d="M2 13c.5-2 2-3 4-3s3.5 1 4 3M10 13c0-1.2.5-2.2 1.5-2.7" /></>} />,
+};
+
+// ---------- Mock data ----------
+const CLUSTERS = [
+  { id: 'positioning', label: 'Positioning', modules: ['Audience', 'Promise', 'Proof'], qs: 6, done: 6 },
+  { id: 'market', label: 'Market & TAM', modules: ['Sizing', 'Segments', 'Geography'], qs: 8, done: 8 },
+  { id: 'competition', label: 'Competition', modules: ['Direct', 'Indirect', 'Substitutes'], qs: 7, done: 5 },
+  { id: 'gtm', label: 'Go‑to‑Market', modules: ['Channels', 'Pricing', 'Funnel'], qs: 9, done: 0 },
+  { id: 'product', label: 'Product Strategy', modules: ['MVP', 'Roadmap', 'Moat'], qs: 7, done: 0 },
+  { id: 'unit-econ', label: 'Unit Economics', modules: ['CAC', 'LTV', 'Payback'], qs: 6, done: 0 },
+  { id: 'risk', label: 'Risk & Compliance', modules: ['Regulatory', 'Operational', 'Tech'], qs: 5, done: 0 },
+  { id: 'team', label: 'Team & Capital', modules: ['Roles', 'Capital', 'Milestones'], qs: 6, done: 0 },
+];
+
+const REPORTS = [
+  { id: 'snapshot', name: 'Venture Snapshot', desc: 'One‑page summary of positioning, market and risks.', cost: 0, pages: 4, locked: false, tier: 'Free' },
+  { id: 'market-deep', name: 'Market Deep‑Dive', desc: 'TAM/SAM/SOM, segmentation, growth vectors, geographic heatmap.', cost: 40, pages: 22, locked: true, tier: 'Pro' },
+  { id: 'competitive', name: 'Competitive Landscape', desc: 'Feature parity, pricing matrix, narrative map, defensibility.', cost: 35, pages: 18, locked: true, tier: 'Pro' },
+  { id: 'gtm-playbook', name: 'GTM Playbook', desc: 'Channel mix, ICP, funnel maths, messaging hierarchy.', cost: 60, pages: 28, locked: true, tier: 'Pro' },
+  { id: 'investor', name: 'Investor Memo', desc: 'Narrative + financials, risks, asks. Editor‑tuned tone.', cost: 90, pages: 14, locked: true, tier: 'Premium' },
+  { id: 'unit-econ', name: 'Unit Economics Model', desc: 'CAC/LTV scenarios, payback curves, sensitivity grid.', cost: 75, pages: 12, locked: true, tier: 'Premium' },
+];
+
+const ACTIVITY = [
+  { t: '2m', who: 'n8n · agent', what: 'Generated 3 follow‑ups in Competition cluster', tone: 'signal' },
+  { t: '14m', who: 'You', what: 'Answered 5 questions in Market & TAM' },
+  { t: '1h', who: 'Stripe', what: 'Top‑up · 250 credits · invoice INV‑0421' },
+  { t: '3h', who: 'n8n · agent', what: 'Inferred industry: B2B SaaS · DevTools' },
+  { t: 'Yesterday', who: 'You', what: 'Created venture “Northwind Cargo”' },
+];
+
+// ---------- App shell context ----------
+const AppCtx = createContext(null);
+const useApp = () => useContext(AppCtx);
+
+function AppProvider({ children }) {
+  const [route, setRoute] = useState('landing'); // landing | signup | onboarding | app
+  const [appView, setAppView] = useState('dashboard'); // dashboard | venture | questions | outputs | reports | report-detail | credits | settings
+  const [credits, setCredits] = useState(180);
+  const [planCredits] = useState(500);
+  const [tenant, setTenant] = useState({
+    name: 'Northwind Cargo',
+    workspace: 'northwind',
+    industry: 'Logistics SaaS',
+    plan: 'Studio',
+  });
+  const [activeReport, setActiveReport] = useState('competitive');
+  const [toasts, setToasts] = useState([]);
+  const toast = (msg) => {
+    const id = Math.random().toString(36).slice(2);
+    setToasts((t) => [...t, { id, msg }]);
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3200);
+  };
+
+  const value = {
+    route, setRoute,
+    appView, setAppView,
+    credits, setCredits, planCredits,
+    tenant, setTenant,
+    activeReport, setActiveReport,
+    toast,
+  };
+  return (
+    <AppCtx.Provider value={value}>
+      {children}
+      <Toasts toasts={toasts} />
+    </AppCtx.Provider>
+  );
+}
+
+function Toasts({ toasts }) {
+  return (
+    <div style={{ position: 'fixed', right: 20, bottom: 20, display: 'flex', flexDirection: 'column', gap: 8, zIndex: 90 }}>
+      {toasts.map((t) => (
+        <div key={t.id} className="fade-up" style={{
+          background: 'var(--bg-2)', border: '1px solid var(--line-2)',
+          borderRadius: 8, padding: '10px 14px', fontSize: 13, color: 'var(--paper)',
+          display: 'flex', alignItems: 'center', gap: 10, minWidth: 240,
+        }}>
+          <span style={{ color: 'var(--signal)' }}>{I.check}</span>
+          {t.msg}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// expose
+Object.assign(window, { I, Icon, CLUSTERS, REPORTS, ACTIVITY, AppCtx, AppProvider, useApp });
+
+</script>
+<script type="text/babel" data-file="landing.jsx">
+/* global React, I, useApp */
+const { I, Icon, CLUSTERS, REPORTS, ACTIVITY, AppCtx, AppProvider, useApp } = window;
+const { useState, useEffect, useMemo, useRef, createContext, useContext, Fragment } = React;
+
+function Landing() {
+  const { setRoute } = useApp();
+  return (
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--paper)' }}>
+      {/* Top bar */}
+      <header style={{
+        position: 'sticky', top: 0, zIndex: 20, background: 'rgba(10,10,11,0.72)',
+        backdropFilter: 'blur(8px)', borderBottom: '1px solid var(--line)'
+      }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '14px 28px', display: 'flex', alignItems: 'center', gap: 24 }}>
+          <a onClick={() => setRoute('landing')} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+            <span style={{ color: 'var(--signal)' }}>{I.logo(20)}</span>
+            <span style={{ fontWeight: 600, letterSpacing: '-0.01em', fontSize: 15 }}>VentureCraft</span>
+            <span className="tag" style={{ marginLeft: 4 }}>v0.9 · beta</span>
+          </a>
+          <nav className="r-mobile-hide" style={{ display: 'flex', gap: 22, marginLeft: 28, fontSize: 13, color: 'var(--ink-faint)' }}>
+            <a style={{ cursor: 'pointer' }}>Product</a>
+            <a style={{ cursor: 'pointer' }}>Reports</a>
+            <a style={{ cursor: 'pointer' }}>Pricing</a>
+            <a style={{ cursor: 'pointer' }}>Changelog</a>
+            <a style={{ cursor: 'pointer' }}>Docs</a>
+          </nav>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+            <button className="btn ghost sm" onClick={() => setRoute('signup')}>Sign in</button>
+            <button className="btn primary sm" onClick={() => setRoute('signup')}>Start a venture {I.arrow}</button>
+          </div>
+        </div>
+      </header>
+
+      {/* Hero */}
+      <section style={{ borderBottom: '1px solid var(--line)', position: 'relative', overflow: 'hidden' }}>
+        <div className="grid-bg" style={{ position: 'absolute', inset: 0, opacity: 0.35, maskImage: 'linear-gradient(180deg, black 30%, transparent 100%)' }} />
+        <div className="r-pad-xl" style={{ maxWidth: 1280, margin: '0 auto', padding: '92px 28px 80px', position: 'relative' }}>
+          <div className="tag" style={{ marginBottom: 28 }}>
+            <span className="dot" style={{ background: 'var(--signal)' }} />
+            n8n‑powered research agent · live
+          </div>
+          <h1 style={{
+            fontSize: 'clamp(48px, 6vw, 84px)', lineHeight: 1.0, letterSpacing: '-0.035em',
+            fontWeight: 500, margin: 0, maxWidth: 1100,
+          }}>
+            Pressure‑test a business<br/>
+            <span style={{ color: 'var(--ink-faint)' }}>in the time it takes to write a brief.</span>
+          </h1>
+          <p style={{ fontSize: 18, color: 'var(--ink-faint)', maxWidth: 620, marginTop: 28, lineHeight: 1.5 }}>
+            Drop in a paragraph and a few competitor links. VentureCraft interviews you with structured questions,
+            then ships a hi‑fi, source‑ready report — billed by the credit, opinionated by design.
+          </p>
+          <div style={{ marginTop: 36, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+            <button className="btn primary lg" onClick={() => setRoute('signup')}>Start your first venture {I.arrow}</button>
+            <button className="btn lg" onClick={() => setRoute('app')}>See it working {I.external}</button>
+            <span className="mono" style={{ fontSize: 12, color: 'var(--ink-faint)', marginLeft: 8 }}>
+              50 credits free · no card
+            </span>
+          </div>
+
+          {/* Hero artifact */}
+          <div style={{ marginTop: 64 }}>
+            <HeroArtifact />
+          </div>
+        </div>
+      </section>
+
+      {/* Logos / proof strip */}
+      <section style={{ borderBottom: '1px solid var(--line)', padding: '22px 28px' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 28, flexWrap: 'wrap' }}>
+          <span className="eyebrow">Trusted by builders at</span>
+          <div style={{ display: 'flex', gap: 36, alignItems: 'center', flexWrap: 'wrap', color: 'var(--ink-faint)', fontFamily: 'var(--mono)', fontSize: 13, letterSpacing: '0.02em' }}>
+            <span>NORTHWIND</span><span>HALCYON LABS</span><span>FIELDPOINT</span><span>UMBRA / OS</span><span>PRIMER &amp; CO.</span><span>RIVERSTONE</span>
+          </div>
+        </div>
+      </section>
+
+      {/* The loop */}
+      <section style={{ borderBottom: '1px solid var(--line)' }}>
+        <div className="r-pad-xl" style={{ maxWidth: 1280, margin: '0 auto', padding: '80px 28px' }}>
+          <div className="r-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 56, alignItems: 'start' }}>
+            <div>
+              <div className="eyebrow">01 · The loop</div>
+              <h2 style={{ fontSize: 42, lineHeight: 1.05, letterSpacing: '-0.025em', fontWeight: 500, margin: '12px 0 18px' }}>
+                Four steps. No deck‑making. No hand‑waving.
+              </h2>
+              <p style={{ color: 'var(--ink-faint)', fontSize: 15, lineHeight: 1.6, maxWidth: 380 }}>
+                Each cluster fans out into modules. The agent reads your answers,
+                fills the prompt graph, and renders a final HTML‑to‑PDF report that
+                actually looks like consulting work.
+              </p>
+            </div>
+            <div className="r-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              {[
+                { n: '01', t: 'Brief', d: 'Drop a paragraph. Optional: competitor URLs. We let AI infer the industry — or pick yourself.' },
+                { n: '02', t: 'Interview', d: 'Structured Q&A across 8 design clusters. Skip what doesn\'t apply, expand what matters.' },
+                { n: '03', t: 'Synthesise', d: 'n8n agent fans out, fills your prompt graph, writes module outputs you can review and edit.' },
+                { n: '04', t: 'Report', d: 'Pick a template (or upload yours). Render to hi‑fi HTML or PDF. Pay only for what you ship.' },
+              ].map((s) => (
+                <div key={s.n} className="card" style={{ padding: 22 }}>
+                  <div className="mono" style={{ fontSize: 11, color: 'var(--signal)', letterSpacing: '0.10em' }}>{s.n}</div>
+                  <div style={{ fontSize: 18, fontWeight: 500, marginTop: 10, letterSpacing: '-0.01em' }}>{s.t}</div>
+                  <div style={{ color: 'var(--ink-faint)', fontSize: 13, lineHeight: 1.55, marginTop: 8 }}>{s.d}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Reports preview */}
+      <section style={{ borderBottom: '1px solid var(--line)' }}>
+        <div className="r-pad-xl" style={{ maxWidth: 1280, margin: '0 auto', padding: '80px 28px' }}>
+          <div style={{ display: 'flex', alignItems: 'end', justifyContent: 'space-between', marginBottom: 28 }}>
+            <div>
+              <div className="eyebrow">02 · Reports</div>
+              <h2 style={{ fontSize: 42, lineHeight: 1.05, letterSpacing: '-0.025em', fontWeight: 500, margin: '12px 0 0' }}>
+                Free where it counts.<br/><span style={{ color: 'var(--ink-faint)' }}>Paid where it matters.</span>
+              </h2>
+            </div>
+            <div className="mono" style={{ fontSize: 12, color: 'var(--ink-faint)' }}>
+              CREDITS = USD ÷ 100 · ROLLOVER ON ANNUAL
+            </div>
+          </div>
+          <div className="r-cards-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+            {window.REPORTS.slice(0, 6).map((r) => (
+              <div key={r.id} className="card" style={{ padding: 20, position: 'relative', overflow: 'hidden' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                  <span className={`tag ${r.locked ? '' : 'signal'}`}>
+                    {r.locked ? <>{I.lock}</> : <span className="dot" />} {r.tier}
+                  </span>
+                  <span className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)' }}>
+                    {r.cost === 0 ? 'INCLUDED' : `${r.cost} CR`}
+                  </span>
+                </div>
+                <div style={{ fontSize: 18, fontWeight: 500, marginTop: 14, letterSpacing: '-0.01em' }}>{r.name}</div>
+                <div style={{ color: 'var(--ink-faint)', fontSize: 13, lineHeight: 1.55, marginTop: 6, minHeight: 60 }}>{r.desc}</div>
+                <div className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)', marginTop: 14 }}>
+                  ~{r.pages} PAGES · HTML / PDF
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing strip */}
+      <section style={{ borderBottom: '1px solid var(--line)' }}>
+        <div className="r-pad-xl" style={{ maxWidth: 1280, margin: '0 auto', padding: '80px 28px' }}>
+          <div className="r-pricing-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 0 }}>
+            {[
+              { name: 'Solo', price: '0', credits: '50', f: ['1 venture', 'Snapshot reports', 'Community templates'] },
+              { name: 'Studio', price: '49', credits: '500', f: ['5 ventures', 'All Pro reports', 'Custom templates', 'Private AI endpoint'], highlight: true },
+              { name: 'Firm', price: '149', credits: '1,800', f: ['Unlimited ventures', 'All Premium reports', 'Tenant‑level theming', 'Audit log'] },
+              { name: 'Bring‑your‑own', price: '—', credits: 'Variable', f: ['Use your AI keys', 'Costed at compute', 'Volume pricing', 'SLA'] },
+            ].map((p) => (
+              <div key={p.name} style={{
+                padding: 28, borderRight: '1px solid var(--line)', position: 'relative',
+                background: p.highlight ? 'var(--bg-1)' : 'transparent',
+              }}>
+                {p.highlight && (
+                  <div className="mono" style={{ position: 'absolute', top: 14, right: 14, fontSize: 10, color: 'var(--signal)', letterSpacing: '0.10em' }}>RECOMMENDED</div>
+                )}
+                <div className="eyebrow">{p.name}</div>
+                <div style={{ marginTop: 14, display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                  <span style={{ fontSize: 42, fontWeight: 500, letterSpacing: '-0.02em' }}>${p.price}</span>
+                  <span className="mono" style={{ fontSize: 12, color: 'var(--ink-faint)' }}>/MO</span>
+                </div>
+                <div className="mono" style={{ fontSize: 12, color: 'var(--signal)', marginTop: 4 }}>{p.credits} CREDITS / MONTH</div>
+                <ul style={{ listStyle: 'none', padding: 0, margin: '20px 0 0', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {p.f.map((x, i) => (
+                    <li key={i} style={{ display: 'flex', gap: 8, fontSize: 13, color: 'var(--paper)' }}>
+                      <span style={{ color: 'var(--signal)' }}>{I.check}</span>{x}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer style={{ padding: '28px' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--ink-faint)', fontSize: 12 }}>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <span style={{ color: 'var(--signal)' }}>{I.logo(14)}</span>
+            <span className="mono">VENTURECRAFT · ©2026</span>
+          </div>
+          <div style={{ display: 'flex', gap: 22 }} className="mono">
+            <a>SECURITY</a><a>STATUS · 99.97</a><a>TERMS</a><a>PRIVACY</a>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+function HeroArtifact() {
+  return (
+    <div className="card" style={{ padding: 0, overflow: 'hidden', position: 'relative' }}>
+      <div className="r-hero-artifact" style={{ display: 'grid', gridTemplateColumns: '260px 1fr 320px', minHeight: 360 }}>
+        {/* progress map */}
+        <div style={{ borderRight: '1px solid var(--line)', padding: 18 }}>
+          <div className="eyebrow" style={{ marginBottom: 12 }}>Clusters · 8</div>
+          {window.CLUSTERS.slice(0, 6).map((c, i) => (
+            <div key={c.id} className={`cluster-row ${i === 2 ? 'active' : i < 2 ? 'done' : ''}`} style={{ '--p': i < 2 ? 100 : i === 2 ? 70 : 0 }}>
+              <span className="num">0{i + 1}</span>
+              <span className="ring" style={{ '--p': i < 2 ? 100 : i === 2 ? 70 : 0 }} />
+              <span style={{ fontSize: 13, flex: 1 }}>{c.label}</span>
+              <span className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)' }}>{c.done}/{c.qs}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* active question */}
+        <div style={{ padding: 28, borderRight: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span className="tag signal"><span className="dot" /> 03 · COMPETITION</span>
+            <span className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)' }}>QUESTION 4 / 7</span>
+            <span className="kbd" style={{ marginLeft: 'auto' }}>⌘ ↵ NEXT</span>
+          </div>
+          <h3 style={{ fontSize: 26, fontWeight: 500, letterSpacing: '-0.015em', lineHeight: 1.2, margin: 0 }}>
+            Where does the leading incumbent break for your wedge user?
+          </h3>
+          <p style={{ color: 'var(--ink-faint)', margin: 0, fontSize: 14 }}>
+            Be specific. We&rsquo;ll cite this verbatim in the Competitive Landscape report.
+          </p>
+          <textarea className="textarea" style={{ minHeight: 120 }} defaultValue="They built for fleet ops at &gt;500 vehicles. Below 80, the workflow assumes a dispatcher exists — solo owner‑operators have to fake one. Onboarding takes 11 days." />
+          <div style={{ display: 'flex', gap: 8, marginTop: 'auto' }}>
+            <button className="btn sm">Skip</button>
+            <button className="btn sm">Save draft</button>
+            <div style={{ flex: 1 }} />
+            <button className="btn primary sm">Next {I.arrow}</button>
+          </div>
+        </div>
+
+        {/* agent stream */}
+        <div style={{ padding: 18, background: 'var(--bg-1)' }}>
+          <div className="eyebrow" style={{ marginBottom: 12 }}>Agent · n8n</div>
+          {[
+            { t: 'now', s: 'Inferred persona: solo owner‑operator (1–3 trucks).' },
+            { t: '12s', s: 'Generated follow‑up: pricing sensitivity at <$80/mo.' },
+            { t: '34s', s: 'Cluster Market & TAM marked complete.' },
+            { t: '1m', s: 'Pulled 6 competitor data points from supplied URLs.' },
+          ].map((e, i) => (
+            <div key={i} style={{ display: 'flex', gap: 10, padding: '8px 0', borderBottom: '1px dashed var(--line)' }}>
+              <span className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)', width: 36 }}>{e.t}</span>
+              <span style={{ fontSize: 12, color: 'var(--paper)', lineHeight: 1.5 }}>{e.s}</span>
+            </div>
+          ))}
+          <div style={{ marginTop: 14, padding: 12, border: '1px solid var(--line-2)', borderRadius: 6, background: 'var(--bg-2)' }}>
+            <div className="mono" style={{ fontSize: 11, color: 'var(--signal)', marginBottom: 6 }}>NEXT REPORT · COMPETITIVE</div>
+            <div style={{ fontSize: 12, color: 'var(--ink-faint)' }}>Estimated cost <span className="mono" style={{ color: 'var(--paper)' }}>35 CR</span> · 18 pages</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+window.Landing = Landing;
+Object.assign(window, { Landing });
+
+</script>
+<script type="text/babel" data-file="signup.jsx">
+/* global React, I, useApp */
+const { I, Icon, CLUSTERS, REPORTS, ACTIVITY, AppCtx, AppProvider, useApp } = window;
+const { useState, useEffect, useMemo, useRef, createContext, useContext, Fragment } = React;
+
+function Signup() {
+  const { setRoute, toast } = useApp();
+  const [step, setStep] = React.useState(0); // 0 acct, 1 workspace, 2 plan
+  const [acct, setAcct] = React.useState({ name: '', email: '', work: 'Founder' });
+  const [ws, setWs] = React.useState({ name: '', slug: '', size: 'Solo' });
+  const [plan, setPlan] = React.useState('studio');
+
+  const finish = () => {
+    toast('Workspace created · 50 trial credits added');
+    setRoute('onboarding');
+  };
+
+  return (
+    <div className="r-split" style={{ minHeight: '100vh', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+      {/* Left: form */}
+      <div className="r-pad-lg" style={{ padding: '32px 56px', display: 'flex', flexDirection: 'column', gap: 32, borderRight: '1px solid var(--line)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <a onClick={() => setRoute('landing')} style={{ display: 'flex', gap: 10, alignItems: 'center', cursor: 'pointer' }}>
+            <span style={{ color: 'var(--signal)' }}>{I.logo(20)}</span>
+            <span style={{ fontWeight: 600, letterSpacing: '-0.01em' }}>VentureCraft</span>
+          </a>
+          <span className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)' }}>STEP {step + 1} / 3</span>
+        </div>
+
+        {/* Steps strip */}
+        <div style={{ display: 'flex', gap: 8 }}>
+          {['Account', 'Workspace', 'Plan'].map((s, i) => (
+            <div key={s} style={{ flex: 1 }}>
+              <div className="bar"><i style={{ width: i <= step ? '100%' : '0%', transition: 'width 320ms ease' }} /></div>
+              <div className="mono" style={{ fontSize: 11, color: i === step ? 'var(--signal)' : 'var(--ink-faint)', marginTop: 8, letterSpacing: '0.10em' }}>
+                0{i + 1} · {s.toUpperCase()}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 460 }}>
+          {step === 0 && (
+            <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              <h1 className="r-h-1" style={{ fontSize: 36, letterSpacing: '-0.02em', fontWeight: 500, margin: 0 }}>Create your account.</h1>
+              <p style={{ color: 'var(--ink-faint)', margin: 0 }}>50 credits free. No card. Single sign‑on if you’d rather skip the typing.</p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn" style={{ flex: 1 }}>Continue with Google</button>
+                <button className="btn" style={{ flex: 1 }}>SSO</button>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--ink-faint)', fontSize: 12 }}>
+                <span style={{ flex: 1, height: 1, background: 'var(--line)' }} /> OR <span style={{ flex: 1, height: 1, background: 'var(--line)' }} />
+              </div>
+              <div>
+                <label className="field-label">Full name</label>
+                <input className="input" placeholder="Ada Okonkwo" value={acct.name} onChange={(e) => setAcct({ ...acct, name: e.target.value })} />
+              </div>
+              <div>
+                <label className="field-label">Work email</label>
+                <input className="input" placeholder="ada@northwind.co" value={acct.email} onChange={(e) => setAcct({ ...acct, email: e.target.value })} />
+              </div>
+              <div>
+                <label className="field-label">Your role</label>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {['Founder', 'Operator', 'Consultant', 'PM', 'Investor'].map((r) => (
+                    <button key={r} className="btn sm" onClick={() => setAcct({ ...acct, work: r })}
+                      style={{ borderColor: acct.work === r ? 'var(--signal)' : 'var(--line)', background: acct.work === r ? 'var(--signal-soft)' : 'var(--bg-2)' }}>
+                      {r}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <button className="btn primary lg" onClick={() => setStep(1)}>Continue {I.arrow}</button>
+            </div>
+          )}
+
+          {step === 1 && (
+            <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              <h1 className="r-h-1" style={{ fontSize: 36, letterSpacing: '-0.02em', fontWeight: 500, margin: 0 }}>Name your workspace.</h1>
+              <p style={{ color: 'var(--ink-faint)', margin: 0 }}>One workspace per tenant. You can rename later — the slug is permanent.</p>
+              <div>
+                <label className="field-label">Workspace name</label>
+                <input className="input" placeholder="Northwind Labs" value={ws.name}
+                  onChange={(e) => setWs({ ...ws, name: e.target.value, slug: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') })} />
+              </div>
+              <div>
+                <label className="field-label">Workspace URL</label>
+                <div style={{ display: 'flex', alignItems: 'stretch', border: '1px solid var(--line)', borderRadius: 6, background: 'var(--bg-2)', overflow: 'hidden' }}>
+                  <span className="mono" style={{ padding: '10px 12px', color: 'var(--ink-faint)', fontSize: 13, borderRight: '1px solid var(--line)' }}>venturecraft.app/</span>
+                  <input className="input" style={{ border: 'none', borderRadius: 0, background: 'transparent' }}
+                    placeholder="northwind" value={ws.slug} onChange={(e) => setWs({ ...ws, slug: e.target.value })} />
+                </div>
+              </div>
+              <div>
+                <label className="field-label">Team size</label>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {['Solo', '2–5', '6–20', '21+'].map((r) => (
+                    <button key={r} className="btn sm" onClick={() => setWs({ ...ws, size: r })}
+                      style={{ flex: 1, borderColor: ws.size === r ? 'var(--signal)' : 'var(--line)', background: ws.size === r ? 'var(--signal-soft)' : 'var(--bg-2)' }}>
+                      {r}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn lg" onClick={() => setStep(0)}>{I.arrowLeft} Back</button>
+                <button className="btn primary lg" style={{ flex: 1 }} onClick={() => setStep(2)}>Continue {I.arrow}</button>
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              <h1 className="r-h-1" style={{ fontSize: 36, letterSpacing: '-0.02em', fontWeight: 500, margin: 0 }}>Pick a plan.</h1>
+              <p style={{ color: 'var(--ink-faint)', margin: 0 }}>Switch any time. Annual billing rolls credits over.</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {[
+                  { id: 'solo', name: 'Solo', price: '$0', credits: '50 cr / mo', d: 'Snapshot reports only' },
+                  { id: 'studio', name: 'Studio', price: '$49', credits: '500 cr / mo', d: 'All Pro reports · custom templates · private endpoint', tag: 'Recommended' },
+                  { id: 'firm', name: 'Firm', price: '$149', credits: '1,800 cr / mo', d: 'All Premium · audit log · tenant theming' },
+                ].map((p) => (
+                  <button key={p.id} onClick={() => setPlan(p.id)} className="card" style={{
+                    textAlign: 'left', padding: 16, display: 'flex', alignItems: 'center', gap: 16,
+                    borderColor: plan === p.id ? 'var(--signal)' : 'var(--line)',
+                    background: plan === p.id ? 'var(--signal-soft)' : 'var(--bg-1)',
+                  }}>
+                    <div style={{
+                      width: 16, height: 16, borderRadius: '50%',
+                      border: `1.5px solid ${plan === p.id ? 'var(--signal)' : 'var(--ink-faint)'}`,
+                      background: plan === p.id ? 'var(--signal)' : 'transparent',
+                    }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontWeight: 500, fontSize: 15 }}>{p.name}</span>
+                        {p.tag && <span className="tag signal"><span className="dot" /> {p.tag}</span>}
+                      </div>
+                      <div style={{ color: 'var(--ink-faint)', fontSize: 12, marginTop: 4 }}>{p.d}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div className="mono" style={{ fontSize: 16 }}>{p.price}<span style={{ color: 'var(--ink-faint)', fontSize: 11 }}> /MO</span></div>
+                      <div className="mono" style={{ fontSize: 11, color: 'var(--signal)' }}>{p.credits.toUpperCase()}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn lg" onClick={() => setStep(1)}>{I.arrowLeft} Back</button>
+                <button className="btn primary lg" style={{ flex: 1 }} onClick={finish}>Create workspace {I.arrow}</button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Right: live workspace preview */}
+      <div className="r-mobile-hide" style={{ position: 'relative', overflow: 'hidden', background: 'var(--bg-1)' }}>
+        <div className="grid-bg" style={{ position: 'absolute', inset: 0, opacity: 0.4 }} />
+        <div style={{ position: 'absolute', top: 56, left: 56, right: 56, bottom: 56, display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="card" style={{ padding: 20 }}>
+            <div className="eyebrow">WORKSPACE PREVIEW</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 14 }}>
+              <div style={{
+                width: 44, height: 44, borderRadius: 10, background: 'var(--signal)', color: 'var(--signal-ink)',
+                display: 'grid', placeItems: 'center', fontWeight: 600, fontSize: 18, letterSpacing: '-0.02em',
+              }}>
+                {(ws.name || 'NW').slice(0, 2).toUpperCase()}
+              </div>
+              <div>
+                <div style={{ fontWeight: 500, fontSize: 16 }}>{ws.name || 'Northwind Labs'}</div>
+                <div className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)' }}>
+                  venturecraft.app/{ws.slug || 'northwind'}
+                </div>
+              </div>
+            </div>
+            <div className="divider" style={{ margin: '16px 0' }} />
+            <div className="r-2col-stat" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <Stat label="Plan" v={plan === 'solo' ? 'Solo' : plan === 'studio' ? 'Studio' : 'Firm'} />
+              <Stat label="Credits / mo" v={plan === 'solo' ? '50' : plan === 'studio' ? '500' : '1,800'} />
+              <Stat label="Owner" v={acct.name || '—'} />
+              <Stat label="Role" v={acct.work} />
+            </div>
+          </div>
+          <div className="card" style={{ padding: 20 }}>
+            <div className="eyebrow">WHAT HAPPENS NEXT</div>
+            <ol style={{ listStyle: 'none', padding: 0, margin: '14px 0 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[
+                'Brief your first venture (2 min).',
+                'Answer cluster interview (~12 min).',
+                'Pick a report template — yours or ours.',
+                'Spend credits to render the final PDF.',
+              ].map((t, i) => (
+                <li key={i} style={{ display: 'flex', gap: 12, fontSize: 13 }}>
+                  <span className="mono" style={{ width: 22, color: 'var(--signal)' }}>0{i + 1}</span>
+                  <span>{t}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Stat({ label, v }) {
+  return (
+    <div>
+      <div className="mono" style={{ fontSize: 10, color: 'var(--ink-faint)', letterSpacing: '0.10em' }}>{label.toUpperCase()}</div>
+      <div style={{ fontSize: 14, marginTop: 4 }}>{v}</div>
+    </div>
+  );
+}
+
+window.Signup = Signup;
+Object.assign(window, { Signup });
+
+</script>
+<script type="text/babel" data-file="onboarding.jsx">
+/* global React, I, useApp */
+const { I, Icon, CLUSTERS, REPORTS, ACTIVITY, AppCtx, AppProvider, useApp } = window;
+const { useState, useEffect, useMemo, useRef, createContext, useContext, Fragment } = React;
+
+function Onboarding() {
+  const { setRoute, toast } = useApp();
+  const [step, setStep] = React.useState(0); // 0 brief, 1 geography, 2 artifacts, 3 competitors, 4 industry, 5 confirm
+  const [name, setName] = React.useState('Northwind Cargo');
+  const [brief, setBrief] = React.useState(
+    'Northwind Cargo is a dispatch + compliance app for solo and small‑fleet owner‑operators (1–8 trucks). We replace the dispatcher‑shaped hole that incumbents like KeepTruckin assume already exists, by automating load matching, IFTA filings, and DOT compliance from a single mobile inbox.'
+  );
+  const [scope, setScope] = React.useState('multi'); // local | national | multi | global
+  const [regions, setRegions] = React.useState(['North America']);
+  const [primary, setPrimary] = React.useState('United States');
+  const [secondary, setSecondary] = React.useState(['Canada', 'Mexico']);
+  const [files, setFiles] = React.useState([
+    { name: 'pitch-v3.pdf', kind: 'PDF', size: '2.4 MB', state: 'parsed', sigs: 18 },
+    { name: 'ifta-deck.key', kind: 'KEYNOTE', size: '14.1 MB', state: 'parsed', sigs: 11 },
+    { name: 'customer-interviews.docx', kind: 'DOCX', size: '380 KB', state: 'parsed', sigs: 24 },
+  ]);
+  const [competitors, setCompetitors] = React.useState([
+    'https://keeptruckin.com', 'https://samsara.com', 'https://truckingoffice.com',
+  ]);
+  const [newComp, setNewComp] = React.useState('');
+  const [industry, setIndustry] = React.useState('auto');
+  const [picked, setPicked] = React.useState('Logistics SaaS · Fleet Ops');
+  const [analyzing, setAnalyzing] = React.useState(false);
+
+  const next = () => {
+    if (step === 3) {
+      setAnalyzing(true);
+      setTimeout(() => { setAnalyzing(false); setStep(4); }, 1400);
+    } else if (step === 5) {
+      toast('Venture brief locked · agent warming up');
+      setRoute('app');
+    } else {
+      setStep(step + 1);
+    }
+  };
+  const back = () => setStep(Math.max(0, step - 1));
+
+  const STEPS = ['Brief', 'Geography', 'Artifacts', 'Competitors', 'Industry', 'Confirm'];
+
+  const onPickFiles = (e) => {
+    const list = Array.from(e.target.files || []);
+    if (!list.length) return;
+    const additions = list.map((f) => ({
+      name: f.name,
+      kind: (f.name.split('.').pop() || 'FILE').toUpperCase(),
+      size: `${(f.size / 1024 / 1024).toFixed(1)} MB`,
+      state: 'uploading', sigs: 0,
+    }));
+    setFiles((cur) => [...cur, ...additions]);
+    setTimeout(() => {
+      setFiles((cur) => cur.map((f) => f.state === 'uploading' ? { ...f, state: 'parsed', sigs: 6 + Math.floor(Math.random() * 18) } : f));
+    }, 1100);
+  };
+
+  return (
+    <div style={{ minHeight: '100vh', display: 'grid', gridTemplateRows: 'auto 1fr' }}>
+      {/* Top bar */}
+      <header style={{ borderBottom: '1px solid var(--line)', padding: '14px 28px', display: 'flex', alignItems: 'center', gap: 16 }}>
+        <a onClick={() => setRoute('landing')} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+          <span style={{ color: 'var(--signal)' }}>{I.logo(18)}</span>
+          <span style={{ fontWeight: 600 }}>VentureCraft</span>
+        </a>
+        <span style={{ color: 'var(--ink-faint)' }}>/</span>
+        <span style={{ fontSize: 13 }}>Northwind Labs</span>
+        <span className="tag" style={{ marginLeft: 4 }}>NEW VENTURE</span>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+          {STEPS.map((s, i) => (
+            <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span className="mono" style={{ fontSize: 11, color: i <= step ? 'var(--signal)' : 'var(--ink-faint)', letterSpacing: '0.10em' }}>0{i + 1}</span>
+              <span style={{ fontSize: 12, color: i === step ? 'var(--paper)' : 'var(--ink-faint)' }}>{s}</span>
+              {i < STEPS.length - 1 && <span style={{ width: 16, height: 1, background: 'var(--line)' }} />}
+            </div>
+          ))}
+        </div>
+        <button className="btn sm ghost" onClick={() => setRoute('app')} style={{ marginLeft: 14 }}>Save & exit</button>
+      </header>
+
+      {/* Body */}
+      <div className="r-onboard-body" style={{ display: 'grid', gridTemplateColumns: '1fr 380px', minHeight: 0 }}>
+        <main className="r-pad-lg" style={{ padding: '48px 80px', overflow: 'auto' }}>
+          <div style={{ maxWidth: 760 }}>
+            {step === 0 && (
+              <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                <div>
+                  <div className="eyebrow">01 · BRIEF</div>
+                  <h1 className="r-h-display" style={{ fontSize: 44, letterSpacing: '-0.025em', fontWeight: 500, margin: '12px 0 8px', lineHeight: 1.05 }}>
+                    Tell us what you’re building.
+                  </h1>
+                  <p style={{ color: 'var(--ink-faint)', maxWidth: 560, margin: 0 }}>
+                    Give it a name and a paragraph. The agent treats this as ground truth — we cite it in every report.
+                  </p>
+                </div>
+                <div>
+                  <label className="field-label">Venture name</label>
+                  <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Northwind Cargo" />
+                  <div className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)', marginTop: 6 }}>SLUG · {name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'untitled'}</div>
+                </div>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                    <label className="field-label">Brief description</label>
+                    <span className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)' }}>{brief.length} / 1500</span>
+                  </div>
+                  <textarea className="textarea" style={{ minHeight: 200 }} value={brief} onChange={(e) => setBrief(e.target.value)}
+                    placeholder="Who is it for, what does it do, why does it have to exist now?" />
+                </div>
+                <div className="card" style={{ padding: 16, display: 'flex', gap: 14, alignItems: 'start' }}>
+                  <span style={{ color: 'var(--signal)', marginTop: 2 }}>{I.spark}</span>
+                  <div>
+                    <div style={{ fontWeight: 500, fontSize: 13 }}>Want a tighter brief?</div>
+                    <div style={{ color: 'var(--ink-faint)', fontSize: 12, marginTop: 4 }}>The agent can rewrite this in our house style. 5 credits, undoable.</div>
+                  </div>
+                  <button className="btn sm" style={{ marginLeft: 'auto' }}>Rewrite · 5 cr</button>
+                </div>
+              </div>
+            )}
+
+            {step === 1 && (
+              <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                <div>
+                  <div className="eyebrow">02 · GEOGRAPHY</div>
+                  <h1 className="r-h-display" style={{ fontSize: 44, letterSpacing: '-0.025em', fontWeight: 500, margin: '12px 0 8px', lineHeight: 1.05 }}>
+                    Where will this venture operate?
+                  </h1>
+                  <p style={{ color: 'var(--ink-faint)', margin: 0 }}>
+                    Geography drives TAM sizing, regulatory clusters, and which datasets the agent pulls. Set the
+                    primary market first; add secondary markets if you have them.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="field-label">Operational scope</label>
+                  <div className="r-cards-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                    {[
+                      { id: 'local', t: 'Local', d: 'City / metro' },
+                      { id: 'national', t: 'National', d: 'Single country' },
+                      { id: 'multi', t: 'Multi‑country', d: 'Region or 2–5 markets' },
+                      { id: 'global', t: 'Global', d: 'No regional limit' },
+                    ].map((o) => (
+                      <button key={o.id} className="card" onClick={() => setScope(o.id)} style={{
+                        padding: 14, textAlign: 'left',
+                        borderColor: scope === o.id ? 'var(--signal)' : 'var(--line)',
+                        background: scope === o.id ? 'var(--signal-soft)' : 'var(--bg-1)',
+                      }}>
+                        <div style={{ fontSize: 13, fontWeight: 500 }}>{o.t}</div>
+                        <div className="mono" style={{ fontSize: 10, color: 'var(--ink-faint)', marginTop: 4, letterSpacing: '0.06em' }}>
+                          {o.d.toUpperCase()}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="field-label">Primary market</label>
+                  <input className="input" value={primary} onChange={(e) => setPrimary(e.target.value)} placeholder="Country or metro" />
+                </div>
+
+                <div>
+                  <label className="field-label">Secondary markets</label>
+                  <div className="card" style={{ padding: 12, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+                    {secondary.map((c, i) => (
+                      <span key={c} className="tag signal" style={{ paddingRight: 6 }}>
+                        <span className="dot" /> {c}
+                        <button onClick={() => setSecondary(secondary.filter((_, j) => j !== i))} style={{ marginLeft: 4, color: 'inherit', cursor: 'pointer' }}>{I.x}</button>
+                      </span>
+                    ))}
+                    <input className="input" placeholder="Add a market and press Enter" style={{ flex: 1, minWidth: 200, border: 'none', background: 'transparent', padding: '4px 6px' }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && e.target.value.trim()) {
+                          setSecondary([...secondary, e.target.value.trim()]);
+                          e.target.value = '';
+                        }
+                      }} />
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
+                    <span className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)', alignSelf: 'center', marginRight: 4 }}>SUGGEST:</span>
+                    {['United Kingdom', 'Germany', 'Australia', 'Brazil', 'India', 'EU‑27'].map((s) => (
+                      <button key={s} className="btn sm" onClick={() => !secondary.includes(s) && setSecondary([...secondary, s])}>{s}</button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="field-label">Regulatory regimes detected</label>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {['DOT (US)', 'IFTA (US/CA)', 'FMCSA', 'NSC (Canada)', 'SCT (Mexico)'].map((r) => (
+                      <span key={r} className="tag">{r}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {step === 2 && (
+              <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                <div>
+                  <div className="eyebrow">03 · ARTIFACTS</div>
+                  <h1 className="r-h-display" style={{ fontSize: 44, letterSpacing: '-0.025em', fontWeight: 500, margin: '12px 0 8px', lineHeight: 1.05 }}>
+                    Drop in supporting documents.
+                  </h1>
+                  <p style={{ color: 'var(--ink-faint)', margin: 0 }}>
+                    Optional. Decks, customer interviews, financial models, research notes — the agent extracts
+                    signals and folds them into prompts. Files stay private to your tenant.
+                  </p>
+                </div>
+
+                <label htmlFor="vc-files" className="card" style={{
+                  padding: 28, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+                  borderStyle: 'dashed', cursor: 'pointer',
+                }}>
+                  <span style={{ color: 'var(--signal)' }}>{I.upload}</span>
+                  <div style={{ fontSize: 14, fontWeight: 500 }}>Drag files here or click to browse</div>
+                  <div className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)' }}>PDF · DOCX · KEYNOTE · PPTX · MD · TXT · CSV · UP TO 50 MB</div>
+                  <input id="vc-files" type="file" multiple style={{ display: 'none' }} onChange={onPickFiles} />
+                </label>
+
+                {files.length > 0 && (
+                  <div className="card" style={{ padding: 0 }}>
+                    <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--line)' }}>
+                      <span className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)' }}>UPLOADED · {files.length}</span>
+                      <span className="mono" style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--signal)' }}>
+                        {files.reduce((a, f) => a + f.sigs, 0)} SIGNALS EXTRACTED
+                      </span>
+                    </div>
+                    {files.map((f, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderBottom: i < files.length - 1 ? '1px solid var(--line)' : 'none' }}>
+                        <span style={{ width: 32, height: 32, borderRadius: 5, border: '1px solid var(--line)', display: 'grid', placeItems: 'center', color: 'var(--ink-faint)' }}>{I.doc}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</div>
+                          <div className="mono" style={{ fontSize: 10, color: 'var(--ink-faint)', marginTop: 2, letterSpacing: '0.06em' }}>
+                            {f.kind} · {f.size} · {f.state === 'uploading' ? 'PARSING…' : `${f.sigs} SIGNALS`}
+                          </div>
+                        </div>
+                        {f.state === 'uploading' ? (
+                          <span className="pulse" style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--signal)' }} />
+                        ) : (
+                          <span className="tag signal"><span className="dot" /> PARSED</span>
+                        )}
+                        <button className="btn sm ghost" onClick={() => setFiles(files.filter((_, j) => j !== i))} aria-label="Remove">{I.x}</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="card" style={{ padding: 16, display: 'flex', gap: 14, alignItems: 'start' }}>
+                  <span style={{ color: 'var(--signal)', marginTop: 2 }}>{I.lock}</span>
+                  <div style={{ fontSize: 13 }}>
+                    <div style={{ fontWeight: 500 }}>Private by default</div>
+                    <div style={{ color: 'var(--ink-faint)', marginTop: 4 }}>Files are tenant‑isolated, encrypted at rest, and never used to train models. Delete anytime in Settings → Data.</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {step === 3 && (
+              <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                <div>
+                  <div className="eyebrow">04 · COMPETITORS</div>
+                  <h1 className="r-h-display" style={{ fontSize: 44, letterSpacing: '-0.025em', fontWeight: 500, margin: '12px 0 8px', lineHeight: 1.05 }}>Drop a few URLs.</h1>
+                  <p style={{ color: 'var(--ink-faint)', margin: 0 }}>Optional but recommended. We’ll fetch their public surfaces and pull positioning signals.</p>
+                </div>
+                <div className="card" style={{ padding: 0 }}>
+                  {competitors.map((c, i) => (
+                    <div key={i} style={{ padding: 14, borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 14 }}>
+                      <span className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)', width: 22 }}>0{i + 1}</span>
+                      <span className="placeholder" style={{ width: 28, height: 28, borderRadius: 6, fontSize: 9 }}>{new URL(c).hostname.slice(0, 2).toUpperCase()}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13 }}>{new URL(c).hostname.replace('www.', '')}</div>
+                        <div className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)', marginTop: 2 }}>{analyzing ? 'FETCHING…' : 'PARSED · 14 SIGNALS'}</div>
+                      </div>
+                      <span className="tag">DIRECT</span>
+                      <button className="btn sm ghost" onClick={() => setCompetitors(competitors.filter((_, j) => j !== i))} aria-label="Remove">{I.x}</button>
+                    </div>
+                  ))}
+                  <div style={{ padding: 14, display: 'flex', gap: 8 }}>
+                    <input className="input" placeholder="https://…" value={newComp} onChange={(e) => setNewComp(e.target.value)} />
+                    <button className="btn" onClick={() => { if (newComp) { setCompetitors([...competitors, newComp]); setNewComp(''); } }}>{I.plus} Add</button>
+                  </div>
+                </div>
+                {analyzing && (
+                  <div className="card" style={{ padding: 14, display: 'flex', gap: 12, alignItems: 'center' }}>
+                    <span className="pulse" style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--signal)' }} />
+                    <div className="mono" style={{ fontSize: 12, color: 'var(--ink-faint)' }}>n8n · scraping competitor surfaces · ~3s remaining</div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {step === 4 && (
+              <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                <div>
+                  <div className="eyebrow">05 · INDUSTRY</div>
+                  <h1 className="r-h-display" style={{ fontSize: 44, letterSpacing: '-0.025em', fontWeight: 500, margin: '12px 0 8px', lineHeight: 1.05 }}>Let the agent classify — or pick yourself.</h1>
+                  <p style={{ color: 'var(--ink-faint)', margin: 0 }}>The classification routes which clusters and prompt graphs run. You can override anytime.</p>
+                </div>
+                <div className="r-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <button className="card" onClick={() => setIndustry('auto')} style={{
+                    padding: 22, textAlign: 'left',
+                    borderColor: industry === 'auto' ? 'var(--signal)' : 'var(--line)',
+                    background: industry === 'auto' ? 'var(--signal-soft)' : 'var(--bg-1)',
+                  }}>
+                    <span style={{ color: 'var(--signal)' }}>{I.spark}</span>
+                    <div style={{ fontWeight: 500, fontSize: 16, marginTop: 12 }}>Let AI classify</div>
+                    <div style={{ color: 'var(--ink-faint)', fontSize: 12, marginTop: 6 }}>Suggested: <span className="mono" style={{ color: 'var(--paper)' }}>{picked}</span></div>
+                    <div style={{ marginTop: 14, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {['B2B SaaS', 'Fleet Ops', 'SMB tools', 'Compliance'].map((t) => (
+                        <span key={t} className="tag" style={{ background: 'var(--bg-2)' }}>{t}</span>
+                      ))}
+                    </div>
+                  </button>
+                  <button className="card" onClick={() => setIndustry('manual')} style={{
+                    padding: 22, textAlign: 'left',
+                    borderColor: industry === 'manual' ? 'var(--signal)' : 'var(--line)',
+                    background: industry === 'manual' ? 'var(--signal-soft)' : 'var(--bg-1)',
+                  }}>
+                    <span style={{ color: 'var(--paper)' }}>{I.sliders}</span>
+                    <div style={{ fontWeight: 500, fontSize: 16, marginTop: 12 }}>Pick manually</div>
+                    <div style={{ color: 'var(--ink-faint)', fontSize: 12, marginTop: 6 }}>Choose from 142 verticals across 14 sectors.</div>
+                  </button>
+                </div>
+                {industry === 'manual' && (
+                  <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <input className="input" placeholder="Search industries…" />
+                    <div className="card" style={{ padding: 0, maxHeight: 280, overflow: 'auto' }}>
+                      {[
+                        'Logistics SaaS · Fleet Ops', 'Logistics SaaS · TMS', 'Logistics · Marketplace',
+                        'B2B SaaS · DevTools', 'B2B SaaS · CRM', 'Compliance · Trucking', 'Field Service · SMB',
+                      ].map((opt) => (
+                        <div key={opt} onClick={() => setPicked(opt)} style={{
+                          padding: '12px 16px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10,
+                          cursor: 'pointer', background: picked === opt ? 'var(--bg-2)' : 'transparent', fontSize: 13,
+                        }}>
+                          <span style={{ color: 'var(--signal)', visibility: picked === opt ? 'visible' : 'hidden' }}>{I.check}</span>
+                          {opt}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {step === 5 && (
+              <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                <div>
+                  <div className="eyebrow">06 · CONFIRM</div>
+                  <h1 className="r-h-display" style={{ fontSize: 44, letterSpacing: '-0.025em', fontWeight: 500, margin: '12px 0 8px', lineHeight: 1.05 }}>Ready to interview.</h1>
+                  <p style={{ color: 'var(--ink-faint)', margin: 0 }}>The agent will run 8 clusters, ~52 questions. Skips and follow‑ups adapt as you go.</p>
+                </div>
+                <div className="card" style={{ padding: 22, display: 'flex', flexDirection: 'column', gap: 18 }}>
+                  <Row k="VENTURE" v={name} />
+                  <Row k="GEOGRAPHY" v={`${primary}${secondary.length ? ' + ' + secondary.length + ' more' : ''}`} sub={`${scope.toUpperCase()} · ${secondary.join(' · ')}`} />
+                  <Row k="ARTIFACTS" v={`${files.length} files`} sub={`${files.reduce((a, f) => a + f.sigs, 0)} signals extracted`} />
+                  <Row k="INDUSTRY" v={picked} sub={industry === 'auto' ? 'AI · 92% confidence' : 'Manual'} />
+                  <Row k="COMPETITORS" v={`${competitors.length} parsed`} sub={competitors.map(c => new URL(c).hostname).join(' · ')} />
+                  <Row k="EST. DURATION" v="12–18 min" sub="Skip anything that doesn't apply" />
+                  <Row k="EST. CREDITS" v="0 cr" sub="Interview is free · reports priced separately" />
+                </div>
+                <div className="card" style={{ padding: 16, display: 'flex', gap: 14, alignItems: 'start', borderColor: 'color-mix(in oklch, var(--signal) 30%, var(--line))' }}>
+                  <span style={{ color: 'var(--signal)' }}>{I.zap}</span>
+                  <div style={{ fontSize: 13 }}>
+                    <div style={{ fontWeight: 500 }}>Pro tip — connect a private endpoint</div>
+                    <div style={{ color: 'var(--ink-faint)', marginTop: 4 }}>Settings → AI · Plug your Azure / OpenAI / OpenRouter key for richer context. Doesn’t cost VentureCraft credits.</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 36 }}>
+              <button className="btn lg" onClick={back} disabled={step === 0} style={{ opacity: step === 0 ? 0.5 : 1 }}>{I.arrowLeft} Back</button>
+              <div style={{ flex: 1 }} />
+              <button className="btn primary lg" onClick={next} disabled={analyzing}>
+                {step === 5 ? <>Start interview {I.arrow}</> : analyzing ? 'Analyzing…' : <>Continue {I.arrow}</>}
+              </button>
+            </div>
+          </div>
+        </main>
+
+        {/* Right: live agent inference */}
+        <aside style={{ borderLeft: '1px solid var(--line)', background: 'var(--bg-1)', overflow: 'auto', padding: 24 }}>
+          <div className="eyebrow" style={{ marginBottom: 12 }}>AGENT INFERENCE · LIVE</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <InferRow ok label="Persona" val="Solo & micro‑fleet operators" />
+            <InferRow ok label="Wedge" val="Below 10‑truck fleets, mobile‑first" />
+            <InferRow ok={step >= 1} label="Geography" val={`${primary}${secondary.length ? ' +' + secondary.length : ''}`} />
+            <InferRow ok={step >= 2} label="Artifacts" val={`${files.length} files · ${files.reduce((a, f) => a + f.sigs, 0)} signals`} />
+            <InferRow ok={step >= 3} label="Direct competitors" val={competitors.length ? `${competitors.length} parsed` : '—'} />
+            <InferRow ok={step >= 4} label="Industry" val={picked} />
+            <InferRow ok={step >= 5} label="Prompt graph" val="v2026.04 · ready" />
+          </div>
+          <div className="divider" style={{ margin: '24px 0' }} />
+          <div className="eyebrow" style={{ marginBottom: 12 }}>SIGNALS DETECTED</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {['ELD compliance', 'IFTA', 'load‑matching', 'mobile‑first', 'SMB', 'underserved', 'workflow gap', 'broker disintermediation', 'cross‑border', 'NAFTA corridor'].map((s, i) => (
+              <span key={s} className="tag" style={{ opacity: i < 4 + step ? 1 : 0.35 }}>{s}</span>
+            ))}
+          </div>
+          <div className="divider" style={{ margin: '24px 0' }} />
+          <div className="eyebrow" style={{ marginBottom: 12 }}>UPCOMING CLUSTERS</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {window.CLUSTERS.slice(0, 8).map((c, i) => (
+              <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 4px', borderBottom: '1px dashed var(--line)', fontSize: 12 }}>
+                <span style={{ display: 'flex', gap: 8 }}>
+                  <span className="mono" style={{ color: 'var(--ink-faint)' }}>0{i + 1}</span>
+                  {c.label}
+                </span>
+                <span className="mono" style={{ color: 'var(--ink-faint)' }}>{c.qs} Q</span>
+              </div>
+            ))}
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function Row({ k, v, sub }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 16 }}>
+      <div className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)', letterSpacing: '0.10em', width: 130 }}>{k}</div>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 14 }}>{v}</div>
+        {sub && <div className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)', marginTop: 2 }}>{sub}</div>}
+      </div>
+    </div>
+  );
+}
+
+function InferRow({ ok, label, val }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', opacity: ok ? 1 : 0.4 }}>
+      <span style={{ width: 8, height: 8, borderRadius: '50%', background: ok ? 'var(--signal)' : 'var(--ink-faint)' }} className={ok ? 'pulse' : ''} />
+      <div style={{ flex: 1 }}>
+        <div className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)', letterSpacing: '0.06em' }}>{label.toUpperCase()}</div>
+        <div style={{ fontSize: 13, marginTop: 2 }}>{val}</div>
+      </div>
+    </div>
+  );
+}
+
+window.Onboarding = Onboarding;
+Object.assign(window, { Onboarding });
+
+</script>
+<script type="text/babel" data-file="app-shell.jsx">
+/* global React, I, useApp, CLUSTERS, REPORTS, ACTIVITY */
+const { I, Icon, CLUSTERS, REPORTS, ACTIVITY, AppCtx, AppProvider, useApp } = window;
+const { useState, useEffect, useMemo, useRef, createContext, useContext, Fragment } = React;
+
+function NavList({ NAV, NAV_2, appView, setAppView, onPick }) {
+  return (
+    <div style={{ padding: '8px 12px', flex: 1 }}>
+      <div className="nav-section">Workspace</div>
+      {NAV.map((n) => (
+        <div key={n.id} className={`nav-item ${appView === n.id ? 'active' : ''}`} onClick={() => { setAppView(n.id); onPick && onPick(); }}>
+          <span className="ico">{n.ico}</span>{n.label}
+        </div>
+      ))}
+      <div className="nav-section">Account</div>
+      {NAV_2.map((n) => (
+        <div key={n.id} className={`nav-item ${appView === n.id ? 'active' : ''}`} onClick={() => { setAppView(n.id); onPick && onPick(); }}>
+          <span className="ico">{n.ico}</span>{n.label}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AppShell({ children }) {
+  const { appView, setAppView, tenant, credits, planCredits, setRoute } = useApp();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const NAV = [
+    { id: 'dashboard', label: 'Dashboard', ico: I.chart },
+    { id: 'venture', label: 'Venture', ico: I.cycle },
+    { id: 'questions', label: 'Interview', ico: I.cluster },
+    { id: 'synthesis', label: 'Synthesis', ico: I.spark },
+    { id: 'outputs', label: 'Outputs', ico: I.module },
+    { id: 'reports', label: 'Reports', ico: I.doc },
+  ];
+  const NAV_2 = [
+    { id: 'credits', label: 'Credits & billing', ico: I.credits },
+    { id: 'settings', label: 'Settings', ico: I.settings },
+  ];
+
+  const Brand = () => (
+    <div style={{ padding: '16px 14px 8px', display: 'flex', alignItems: 'center', gap: 10 }}>
+      <span style={{ color: 'var(--signal)' }}>{I.logo(18)}</span>
+      <span style={{ fontWeight: 600, fontSize: 14, letterSpacing: '-0.01em' }}>VentureCraft</span>
+      <button className="btn sm ghost" onClick={() => setRoute('landing')} style={{ marginLeft: 'auto', padding: '2px 6px', height: 22 }} title="Exit">{I.x}</button>
+    </div>
+  );
+  const WorkspacePill = () => (
+    <div style={{ margin: '10px 12px 6px', padding: 10, border: '1px solid var(--line)', borderRadius: 8, background: 'var(--bg-1)', display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div style={{ width: 28, height: 28, borderRadius: 6, background: 'var(--signal)', color: 'var(--signal-ink)', display: 'grid', placeItems: 'center', fontWeight: 600, fontSize: 12 }}>NW</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Northwind Labs</div>
+        <div className="mono" style={{ fontSize: 10, color: 'var(--ink-faint)' }}>STUDIO PLAN</div>
+      </div>
+    </div>
+  );
+  const CreditsBox = () => (
+    <div style={{ padding: 12, borderTop: '1px solid var(--line)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+        <span className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)', letterSpacing: '0.10em' }}>CREDITS</span>
+        <span className="mono" style={{ fontSize: 13 }}>
+          <span style={{ color: 'var(--signal)' }}>{credits}</span>
+          <span style={{ color: 'var(--ink-faint)' }}> / {planCredits}</span>
+        </span>
+      </div>
+      <div className="bar"><i style={{ width: `${(credits / planCredits) * 100}%` }} /></div>
+      <button className="btn sm" style={{ width: '100%', marginTop: 10 }} onClick={() => { setAppView('credits'); setDrawerOpen(false); }}>Top up</button>
+    </div>
+  );
+
+  return (
+    <div className="r-app-shell" style={{ display: 'grid', gridTemplateColumns: '244px 1fr', minHeight: '100vh' }}>
+      <aside className="r-sidebar" style={{ borderRight: '1px solid var(--line)', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+        <Brand />
+        <WorkspacePill />
+        <NavList NAV={NAV} NAV_2={NAV_2} appView={appView} setAppView={setAppView} />
+        <CreditsBox />
+      </aside>
+
+      <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <Topbar onMenu={() => setDrawerOpen(true)} />
+        <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>{children}</div>
+      </div>
+
+      {/* Mobile drawer */}
+      <div className={`r-drawer-mask ${drawerOpen ? 'open' : ''}`} onClick={() => setDrawerOpen(false)} />
+      <aside className={`r-drawer-panel ${drawerOpen ? 'open' : ''}`}>
+        <Brand />
+        <WorkspacePill />
+        <NavList NAV={NAV} NAV_2={NAV_2} appView={appView} setAppView={setAppView} onPick={() => setDrawerOpen(false)} />
+        <CreditsBox />
+      </aside>
+    </div>
+  );
+}
+
+function Topbar({ onMenu }) {
+  const { appView, setAppView } = useApp();
+  const titles = {
+    dashboard: 'Dashboard', venture: 'Venture · Northwind Cargo',
+    questions: 'Interview', outputs: 'Module outputs', reports: 'Reports',
+    'report-detail': 'Report', credits: 'Credits & billing', settings: 'Settings',
+    synthesis: 'Synthesis pipeline',
+  };
+  return (
+    <header style={{ borderBottom: '1px solid var(--line)', padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 12, background: 'var(--bg)' }}>
+      <button className="btn sm r-mobile-only" onClick={onMenu} style={{ padding: '4px 8px' }}>{I.menu}</button>
+      <span className="mono r-mobile-hide" style={{ fontSize: 11, color: 'var(--ink-faint)', letterSpacing: '0.10em' }}>NORTHWIND / NORTHWIND CARGO /</span>
+      <span style={{ fontWeight: 500, fontSize: 14 }}>{titles[appView]}</span>
+      <div style={{ flex: 1 }} />
+      <div className="r-mobile-hide" style={{ display: 'flex', alignItems: 'center', gap: 10, border: '1px solid var(--line)', borderRadius: 6, padding: '6px 10px', background: 'var(--bg-1)', minWidth: 280 }}>
+        <span style={{ color: 'var(--ink-faint)' }}>{I.search}</span>
+        <span style={{ color: 'var(--ink-faint)', fontSize: 13 }}>Search modules, reports…</span>
+        <span style={{ flex: 1 }} />
+        <span className="kbd">⌘ K</span>
+      </div>
+      <button className="btn sm r-mobile-hide">{I.bell}</button>
+      <button className="btn sm">{I.user}<span className="r-mobile-hide">Ada O.</span></button>
+    </header>
+  );
+}
+
+window.AppShell = AppShell;
+Object.assign(window, { AppShell });
+
+</script>
+<script type="text/babel" data-file="views-overview.jsx">
+/* global React, I, useApp, CLUSTERS, REPORTS, ACTIVITY */
+const { I, Icon, CLUSTERS, REPORTS, ACTIVITY, AppCtx, AppProvider, useApp } = window;
+const { useState, useEffect, useMemo, useRef, createContext, useContext, Fragment } = React;
+
+function Dashboard() {
+  const { setAppView, credits, planCredits, tenant } = useApp();
+  const overall = Math.round(window.CLUSTERS.reduce((a, c) => a + c.done, 0) / window.CLUSTERS.reduce((a, c) => a + c.qs, 0) * 100);
+  return (
+    <div className="r-pad" style={{ padding: 28, display: 'flex', flexDirection: 'column', gap: 24 }}>
+      {/* Hero strip */}
+      <div className="card r-2col" style={{ padding: 28, display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 28, alignItems: 'center' }}>
+        <div>
+          <div className="eyebrow">ACTIVE VENTURE</div>
+          <h1 style={{ fontSize: 38, letterSpacing: '-0.02em', fontWeight: 500, margin: '10px 0 6px' }}>Northwind Cargo</h1>
+          <div className="mono" style={{ fontSize: 12, color: 'var(--ink-faint)' }}>LOGISTICS SAAS · FLEET OPS · CYCLE 02 OF 03</div>
+          <p style={{ color: 'var(--paper)', fontSize: 14, lineHeight: 1.6, marginTop: 16, maxWidth: 560 }}>
+            Dispatch + compliance for solo and small‑fleet owner‑operators. The agent is mid‑interview on Competition; two reports unlocked, four awaiting credits.
+          </p>
+          <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
+            <button className="btn primary" onClick={() => setAppView('questions')}>Resume interview {I.arrow}</button>
+            <button className="btn" onClick={() => setAppView('outputs')}>Review outputs</button>
+            <button className="btn ghost" onClick={() => setAppView('reports')}>Reports</button>
+          </div>
+        </div>
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <span className="eyebrow">CYCLE PROGRESS</span>
+            <span className="mono" style={{ fontSize: 26, letterSpacing: '-0.02em' }}>{overall}<span style={{ fontSize: 14, color: 'var(--ink-faint)' }}>%</span></span>
+          </div>
+          <div className="bar" style={{ marginTop: 10 }}><i style={{ width: `${overall}%` }} /></div>
+          <div className="r-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 18 }}>
+            {window.CLUSTERS.slice(0, 8).map((c) => (
+              <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '6px 0', borderBottom: '1px dashed var(--line)' }}>
+                <span style={{ color: 'var(--ink-faint)' }}>{c.label}</span>
+                <span className="mono" style={{ color: c.done === c.qs ? 'var(--signal)' : 'var(--paper)' }}>{c.done}/{c.qs}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* KPI grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+        <KPI label="Credits remaining" v={credits} sub={`OF ${planCredits} · RESETS MAY 1`} accent />
+        <KPI label="Modules generated" v="14" sub="OF 24 · 58%" />
+        <KPI label="Reports rendered" v="2" sub="SNAPSHOT · COMPETITIVE" />
+        <KPI label="Pending credits cost" v="265" sub="ACROSS 4 LOCKED REPORTS" />
+      </div>
+
+      {/* Two-up: clusters + activity */}
+      <div className="r-2col" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 16 }}>
+        <div className="card" style={{ padding: 0 }}>
+          <div style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--line)' }}>
+            <span style={{ fontWeight: 500 }}>Clusters</span>
+            <span className="mono" style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--ink-faint)' }}>52 QUESTIONS · 24 MODULES</span>
+          </div>
+          <table className="cmp">
+            <thead><tr><th style={{ width: 30 }}>#</th><th>Cluster</th><th>Modules</th><th>Progress</th><th></th></tr></thead>
+            <tbody>
+              {window.CLUSTERS.map((c, i) => {
+                const p = Math.round(c.done / c.qs * 100);
+                return (
+                  <tr key={c.id} style={{ cursor: 'pointer' }} onClick={() => setAppView('outputs')}>
+                    <td className="mono" style={{ color: 'var(--ink-faint)' }}>0{i + 1}</td>
+                    <td style={{ fontWeight: 500 }}>{c.label}</td>
+                    <td style={{ color: 'var(--ink-faint)' }}>{c.modules.join(' · ')}</td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div className="bar" style={{ flex: 1, maxWidth: 160 }}><i style={{ width: `${p}%` }} /></div>
+                        <span className="mono" style={{ fontSize: 11, color: p === 100 ? 'var(--signal)' : 'var(--ink-faint)' }}>{p}%</span>
+                      </div>
+                    </td>
+                    <td style={{ color: 'var(--ink-faint)', textAlign: 'right' }}>{I.arrow}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="card" style={{ padding: 0 }}>
+          <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--line)' }}>
+            <span style={{ fontWeight: 500 }}>Activity</span>
+          </div>
+          <div style={{ padding: 10 }}>
+            {window.ACTIVITY.map((a, i) => (
+              <div key={i} style={{ display: 'flex', gap: 12, padding: '12px 8px', borderBottom: '1px dashed var(--line)' }}>
+                <span className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)', width: 60 }}>{a.t.toUpperCase()}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, color: a.tone === 'signal' ? 'var(--signal)' : 'var(--paper)' }}>{a.what}</div>
+                  <div className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)', marginTop: 2 }}>{a.who.toUpperCase()}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Reports preview */}
+      <div className="card" style={{ padding: 0 }}>
+        <div style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--line)' }}>
+          <span style={{ fontWeight: 500 }}>Reports</span>
+          <span className="mono" style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--ink-faint)' }}>2 RENDERED · 4 LOCKED</span>
+          <button className="btn sm" style={{ marginLeft: 12 }} onClick={() => setAppView('reports')}>View all {I.arrow}</button>
+        </div>
+        <div className="r-cards-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0 }}>
+          {window.REPORTS.slice(0, 3).map((r, i) => (
+            <div key={r.id} style={{ padding: 18, borderRight: i < 2 ? '1px solid var(--line)' : 'none' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span className={`tag ${r.locked ? '' : 'signal'}`}>{r.locked ? I.lock : <span className="dot" />} {r.tier}</span>
+                <span className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)' }}>{r.cost === 0 ? 'INCLUDED' : `${r.cost} CR`}</span>
+              </div>
+              <div style={{ fontWeight: 500, fontSize: 15, marginTop: 12 }}>{r.name}</div>
+              <div style={{ color: 'var(--ink-faint)', fontSize: 12, marginTop: 4 }}>{r.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function KPI({ label, v, sub, accent }) {
+  return (
+    <div className="card" style={{ padding: 18 }}>
+      <div className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)', letterSpacing: '0.10em' }}>{label.toUpperCase()}</div>
+      <div className="mono" style={{ fontSize: 32, marginTop: 10, letterSpacing: '-0.02em', color: accent ? 'var(--signal)' : 'var(--paper)' }}>{v}</div>
+      <div className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)', marginTop: 6 }}>{sub}</div>
+    </div>
+  );
+}
+
+// VENTURE — overview of cycles + brief
+function Venture() {
+  const { setAppView } = useApp();
+  return (
+    <div className="r-pad" style={{ padding: 28, display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div className="r-2col" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
+        <div className="card" style={{ padding: 24 }}>
+          <div className="eyebrow">BRIEF · LOCKED</div>
+          <h2 style={{ fontSize: 28, fontWeight: 500, letterSpacing: '-0.02em', margin: '8px 0 12px' }}>Northwind Cargo</h2>
+          <p style={{ color: 'var(--paper)', fontSize: 14, lineHeight: 1.65 }}>
+            Dispatch + compliance app for solo and small‑fleet owner‑operators (1–8 trucks). We replace the
+            dispatcher‑shaped hole that incumbents like KeepTruckin assume already exists, by automating
+            load matching, IFTA filings, and DOT compliance from a single mobile inbox.
+          </p>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 14 }}>
+            {['B2B SaaS', 'Fleet Ops', 'Compliance · Trucking', 'SMB tools'].map((t) => (
+              <span key={t} className="tag">{t}</span>
+            ))}
+          </div>
+          <div className="divider" style={{ margin: '20px 0' }} />
+          <div className="eyebrow">COMPETITORS · 3</div>
+          <div className="r-cards-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginTop: 10 }}>
+            {[
+              { d: 'keeptruckin.com', n: 'KeepTruckin', t: 'Direct · upmarket' },
+              { d: 'samsara.com', n: 'Samsara', t: 'Direct · enterprise' },
+              { d: 'truckingoffice.com', n: 'TruckingOffice', t: 'Substitute' },
+            ].map((c) => (
+              <div key={c.d} style={{ padding: 12, border: '1px solid var(--line)', borderRadius: 6 }}>
+                <div className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)' }}>{c.d.toUpperCase()}</div>
+                <div style={{ fontSize: 13, marginTop: 4 }}>{c.n}</div>
+                <span className="tag" style={{ marginTop: 8 }}>{c.t}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="card" style={{ padding: 18 }}>
+            <div className="eyebrow">VENTURE CYCLES</div>
+            <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 0 }}>
+              {[
+                { n: 'Cycle 03', s: 'Live · Investor‑ready', state: 'active' },
+                { n: 'Cycle 02', s: 'Locked · Mar 14', state: 'done' },
+                { n: 'Cycle 01', s: 'Locked · Feb 02', state: 'done' },
+              ].map((c, i) => (
+                <div key={c.n} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: i < 2 ? '1px dashed var(--line)' : 'none' }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: c.state === 'active' ? 'var(--signal)' : 'var(--ink-faint)' }} className={c.state === 'active' ? 'pulse' : ''} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 500 }}>{c.n}</div>
+                    <div className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)' }}>{c.s.toUpperCase()}</div>
+                  </div>
+                  <button className="btn sm">{i === 0 ? 'Open' : 'View'}</button>
+                </div>
+              ))}
+              <button className="btn sm" style={{ marginTop: 12 }}>{I.plus} New cycle</button>
+            </div>
+          </div>
+          <div className="card" style={{ padding: 18 }}>
+            <div className="eyebrow">QUICK ACTIONS</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+              <button className="btn" onClick={() => setAppView('questions')}>Resume interview</button>
+              <button className="btn" onClick={() => setAppView('outputs')}>Review module outputs</button>
+              <button className="btn" onClick={() => setAppView('reports')}>Browse reports</button>
+              <button className="btn ghost">Export workspace</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+window.Dashboard = Dashboard;
+window.Venture = Venture;
+Object.assign(window, { Dashboard, Venture });
+
+</script>
+<script type="text/babel" data-file="view-interview.jsx">
+/* global React, I, useApp, CLUSTERS */
+const { I, Icon, CLUSTERS, REPORTS, ACTIVITY, AppCtx, AppProvider, useApp } = window;
+const { useState, useEffect, useMemo, useRef, createContext, useContext, Fragment } = React;
+
+const QUESTIONS = [
+  {
+    cluster: 'competition', module: 'Direct',
+    title: 'Where does the leading incumbent break for your wedge user?',
+    sub: "Be specific. We'll cite this verbatim in the Competitive Landscape report.",
+    type: 'long',
+    placeholder: 'e.g., Their workflow assumes a dispatcher exists — solo operators have to fake one…',
+    suggestions: ['Onboarding friction', 'Pricing floor too high', 'Mobile UX gaps', 'Compliance not bundled'],
+  },
+  {
+    cluster: 'competition', module: 'Direct',
+    title: 'Pick the closest competitor by GTM motion.',
+    sub: 'Drives the GTM Playbook prompt graph.',
+    type: 'choice',
+    options: [
+      { v: 'kt', l: 'KeepTruckin', d: 'PLG → outbound, fleet ≥10' },
+      { v: 'sm', l: 'Samsara', d: 'Enterprise sales, hardware bundle' },
+      { v: 'to', l: 'TruckingOffice', d: 'SMB self‑serve, no hardware' },
+    ],
+  },
+  {
+    cluster: 'competition', module: 'Direct',
+    title: 'Rate where you out‑perform on each axis.',
+    sub: 'Used in the parity matrix. 1 = behind · 5 = best‑in‑class.',
+    type: 'matrix',
+    rows: ['Mobile UX', 'Onboarding speed', 'Pricing transparency', 'IFTA automation', 'Customer support'],
+  },
+];
+
+function Interview() {
+  const { credits, toast, setAppView } = useApp();
+  const [activeCluster, setActiveCluster] = React.useState('competition');
+  const [qi, setQi] = React.useState(0);
+  const [answers, setAnswers] = React.useState({
+    0: 'They built for fleet ops at >500 vehicles. Below 80, the workflow assumes a dispatcher exists — solo owner‑operators have to fake one. Onboarding takes 11 days.',
+    1: 'kt',
+    2: { 'Mobile UX': 5, 'Onboarding speed': 5, 'Pricing transparency': 4, 'IFTA automation': 4, 'Customer support': 3 },
+  });
+  const q = QUESTIONS[qi];
+
+  const next = () => {
+    if (qi < QUESTIONS.length - 1) setQi(qi + 1);
+    else { toast('Cluster complete · 3 modules synthesized'); setAppView('outputs'); }
+  };
+
+  const totalQ = window.CLUSTERS.reduce((a, c) => a + c.qs, 0);
+  const doneQ = window.CLUSTERS.reduce((a, c) => a + c.done, 0);
+  const overall = Math.round(doneQ / totalQ * 100);
+
+  return (
+    <div className="r-interview-grid" style={{ display: 'grid', gridTemplateColumns: '320px 1fr 360px', minHeight: '100%', maxHeight: 'calc(100vh - 53px)' }}>
+      {/* LEFT — progress map */}
+      <aside style={{ borderRight: '1px solid var(--line)', overflow: 'auto', padding: 18 }}>
+        <div className="eyebrow">PROGRESS MAP</div>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 8 }}>
+          <span className="mono" style={{ fontSize: 32, letterSpacing: '-0.02em' }}>{overall}<span style={{ fontSize: 14, color: 'var(--ink-faint)' }}>%</span></span>
+          <span className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)' }}>{doneQ}/{totalQ} ANSWERED</span>
+        </div>
+        <div className="bar" style={{ marginTop: 8 }}><i style={{ width: `${overall}%` }} /></div>
+
+        <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {window.CLUSTERS.map((c, i) => {
+            const p = Math.round(c.done / c.qs * 100);
+            const isActive = c.id === activeCluster;
+            const isDone = p === 100;
+            return (
+              <div key={c.id} className={`cluster-row ${isActive ? 'active' : ''} ${isDone ? 'done' : ''}`}
+                style={{ '--p': p }} onClick={() => setActiveCluster(c.id)}>
+                <span className="num">0{i + 1}</span>
+                <span className="ring" style={{ '--p': p }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: isActive ? 500 : 400 }}>{c.label}</div>
+                  <div className="mono" style={{ fontSize: 10, color: 'var(--ink-faint)', marginTop: 2 }}>{c.modules.join(' · ').toUpperCase()}</div>
+                </div>
+                <span className="mono" style={{ fontSize: 11, color: isDone ? 'var(--signal)' : 'var(--ink-faint)' }}>{c.done}/{c.qs}</span>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ marginTop: 22 }} className="card">
+          <div style={{ padding: 14 }}>
+            <div className="eyebrow">YOUR CADENCE</div>
+            <div style={{ display: 'flex', alignItems: 'end', gap: 16, marginTop: 10 }}>
+              <div>
+                <div className="mono" style={{ fontSize: 22, letterSpacing: '-0.02em' }}>14<span style={{ fontSize: 12, color: 'var(--ink-faint)' }}> Q/SESSION</span></div>
+              </div>
+              <div className="bars" style={{ flex: 1 }}>
+                {[5, 8, 6, 11, 14, 9, 14, 12, 14].map((v, i) => (
+                  <i key={i} className={i === 4 || i === 6 || i === 8 ? 'hi' : ''} style={{ height: `${v * 6}%` }} />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* CENTER — active question */}
+      <main style={{ overflow: 'auto', padding: '36px 56px', position: 'relative' }}>
+        <div style={{ maxWidth: 720, margin: '0 auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span className="tag signal"><span className="dot" /> 03 · COMPETITION</span>
+            <span className="tag">MODULE · DIRECT</span>
+            <span className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)', marginLeft: 'auto' }}>QUESTION {qi + 1} / {QUESTIONS.length}</span>
+          </div>
+
+          <h1 className="fade-up" key={qi} style={{
+            fontSize: 38, lineHeight: 1.15, letterSpacing: '-0.02em', fontWeight: 500,
+            margin: '32px 0 10px',
+          }}>{q.title}</h1>
+          <p className="fade-up" key={`s-${qi}`} style={{ color: 'var(--ink-faint)', margin: 0, fontSize: 15 }}>{q.sub}</p>
+
+          {/* Answer surfaces */}
+          <div style={{ marginTop: 28 }} className="fade-up" key={`a-${qi}`}>
+            {q.type === 'long' && (
+              <>
+                <textarea className="textarea" style={{ minHeight: 160, fontSize: 15 }} placeholder={q.placeholder}
+                  value={answers[qi] || ''} onChange={(e) => setAnswers({ ...answers, [qi]: e.target.value })} />
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
+                  <span className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)', alignSelf: 'center', marginRight: 4 }}>HINTS:</span>
+                  {q.suggestions.map((s) => (
+                    <button key={s} className="btn sm" onClick={() => setAnswers({ ...answers, [qi]: (answers[qi] || '') + ' · ' + s })}>{s}</button>
+                  ))}
+                </div>
+              </>
+            )}
+            {q.type === 'choice' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {q.options.map((o) => (
+                  <button key={o.v} onClick={() => setAnswers({ ...answers, [qi]: o.v })} className="card" style={{
+                    textAlign: 'left', padding: 16, display: 'flex', alignItems: 'center', gap: 14,
+                    borderColor: answers[qi] === o.v ? 'var(--signal)' : 'var(--line)',
+                    background: answers[qi] === o.v ? 'var(--signal-soft)' : 'var(--bg-1)',
+                  }}>
+                    <span style={{
+                      width: 18, height: 18, borderRadius: '50%',
+                      border: `1.5px solid ${answers[qi] === o.v ? 'var(--signal)' : 'var(--ink-faint)'}`,
+                      background: answers[qi] === o.v ? 'var(--signal)' : 'transparent',
+                    }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 500, fontSize: 14 }}>{o.l}</div>
+                      <div style={{ color: 'var(--ink-faint)', fontSize: 12, marginTop: 2 }}>{o.d}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            {q.type === 'matrix' && (
+              <div className="card" style={{ padding: 0 }}>
+                {q.rows.map((row, ri) => (
+                  <div key={row} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, padding: '12px 16px', borderBottom: ri < q.rows.length - 1 ? '1px solid var(--line)' : 'none' }}>
+                    <div style={{ fontSize: 13 }}>{row}</div>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      {[1, 2, 3, 4, 5].map((n) => {
+                        const cur = (answers[qi] || {})[row];
+                        const on = cur >= n;
+                        return (
+                          <button key={n} onClick={() => setAnswers({ ...answers, [qi]: { ...(answers[qi] || {}), [row]: n } })}
+                            style={{
+                              width: 28, height: 28, borderRadius: 5,
+                              border: `1px solid ${on ? 'var(--signal)' : 'var(--line)'}`,
+                              background: on ? 'var(--signal)' : 'var(--bg-2)',
+                              color: on ? 'var(--signal-ink)' : 'var(--ink-faint)',
+                              fontFamily: 'var(--mono)', fontSize: 11, cursor: 'pointer',
+                            }}>{n}</button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Footer actions */}
+          <div style={{ display: 'flex', gap: 8, marginTop: 36 }}>
+            <button className="btn" onClick={() => setQi(Math.max(0, qi - 1))} disabled={qi === 0} style={{ opacity: qi === 0 ? 0.5 : 1 }}>{I.arrowLeft} Back</button>
+            <button className="btn ghost">Skip</button>
+            <button className="btn ghost">Save draft</button>
+            <div style={{ flex: 1 }} />
+            <span className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)', alignSelf: 'center', marginRight: 4 }}>⌘ ↵</span>
+            <button className="btn primary" onClick={next}>{qi === QUESTIONS.length - 1 ? 'Finish cluster' : 'Next'} {I.arrow}</button>
+          </div>
+        </div>
+      </main>
+
+      {/* RIGHT — agent panel */}
+      <aside style={{ borderLeft: '1px solid var(--line)', overflow: 'auto', padding: 18, background: 'var(--bg-1)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span className="pulse" style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--signal)' }} />
+          <span className="eyebrow" style={{ color: 'var(--signal)' }}>AGENT · LISTENING</span>
+        </div>
+        <div style={{ marginTop: 16, fontSize: 13, color: 'var(--paper)', lineHeight: 1.55 }}>
+          Your draft references <span className="mono" style={{ color: 'var(--signal)' }}>11‑day onboarding</span>. I&rsquo;ll add a follow‑up about activation metrics if that&rsquo;s a wedge worth quantifying.
+        </div>
+        <div style={{ marginTop: 16, padding: 14, border: '1px dashed var(--line-2)', borderRadius: 8 }}>
+          <div className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)' }}>QUEUED FOLLOW‑UPS · 2</div>
+          <div style={{ marginTop: 8, fontSize: 13 }}>· What activation metric would you target instead?</div>
+          <div style={{ marginTop: 6, fontSize: 13 }}>· Is the 11‑day figure self‑reported or measured?</div>
+        </div>
+
+        <div className="divider" style={{ margin: '24px 0' }} />
+        <div className="eyebrow">PROMPT GRAPH KEYS · LIVE</div>
+        <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {[
+            { k: '{{venture.wedge}}', v: 'solo & micro‑fleet operators' },
+            { k: '{{competitor.lead}}', v: 'KeepTruckin' },
+            { k: '{{incumbent.gap}}', v: 'no‑dispatcher workflow' },
+            { k: '{{onboarding.days}}', v: '11' },
+            { k: '{{cluster.competition.score}}', v: '4.2 / 5' },
+          ].map((kv) => (
+            <div key={kv.k} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '6px 8px', background: 'var(--bg-2)', borderRadius: 4 }}>
+              <span className="mono" style={{ fontSize: 11, color: 'var(--signal)' }}>{kv.k}</span>
+              <span className="mono" style={{ fontSize: 11, color: 'var(--paper)', textAlign: 'right' }}>{kv.v}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="divider" style={{ margin: '24px 0' }} />
+        <div className="eyebrow">ESTIMATED COST IF RENDERED NOW</div>
+        <div style={{ marginTop: 10 }}>
+          {[
+            { n: 'Snapshot', c: 0 },
+            { n: 'Competitive Landscape', c: 35 },
+            { n: 'GTM Playbook', c: 60 },
+          ].map((r) => (
+            <div key={r.n} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px dashed var(--line)', fontSize: 12 }}>
+              <span>{r.n}</span>
+              <span className="mono" style={{ color: r.c === 0 ? 'var(--signal)' : 'var(--paper)' }}>{r.c === 0 ? 'INCLUDED' : `${r.c} CR`}</span>
+            </div>
+          ))}
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+window.Interview = Interview;
+Object.assign(window, { Interview });
+
+</script>
+<script type="text/babel" data-file="view-synthesis.jsx">
+/* global React, I, useApp */
+const { I, Icon, CLUSTERS, REPORTS, ACTIVITY, AppCtx, AppProvider, useApp } = window;
+const { useState, useEffect, useMemo, useRef, createContext, useContext, Fragment } = React;
+
+function Synthesis() {
+  const { setAppView } = useApp();
+  const [running, setRunning] = React.useState(true);
+  const [stage, setStage] = React.useState(2);
+
+  React.useEffect(() => {
+    if (!running) return;
+    const t = setInterval(() => setStage((s) => Math.min(s + 1, 5)), 1400);
+    return () => clearInterval(t);
+  }, [running]);
+
+  const STAGES = [
+    { id: 'memory', t: 'n8n memory', d: 'Conversation log + extracted facts loaded from interview', cost: '—' },
+    { id: 'route', t: 'Prompt router', d: 'Classifies which prompt graphs to fan out (8 clusters → 24 modules)', cost: '—' },
+    { id: 'fill', t: 'Key extraction', d: 'Pulls 142 content keys from answers + uploaded artifacts', cost: '12 cr' },
+    { id: 'synth', t: 'Module synthesis', d: 'Each module runs a pre‑built prompt with key replacements', cost: '46 cr' },
+    { id: 'reduce', t: 'Cross‑module reducer', d: 'Resolves conflicts; promotes winning narratives to report keys', cost: '8 cr' },
+    { id: 'render', t: 'Report renderer', d: 'Templates fill from final keys → HTML → PDF', cost: 'on demand' },
+  ];
+
+  return (
+    <div style={{ padding: 28, display: 'flex', flexDirection: 'column', gap: 20, maxHeight: 'calc(100vh - 53px)', overflow: 'auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div>
+          <div className="eyebrow">SYNTHESIS PIPELINE · CYCLE 02</div>
+          <h1 style={{ fontSize: 32, fontWeight: 500, letterSpacing: '-0.02em', margin: '6px 0 0' }}>Answers → keys → reports.</h1>
+        </div>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
+          <span className="tag signal"><span className="dot pulse" /> RUNNING · STAGE {stage + 1} / 6</span>
+          <button className="btn sm" onClick={() => setRunning(!running)}>{running ? 'Pause' : 'Resume'}</button>
+          <button className="btn sm" onClick={() => setAppView('reports')}>Reports {I.arrow}</button>
+        </div>
+      </div>
+
+      {/* Pipeline */}
+      <div className="card" style={{ padding: 0 }}>
+        <div className="r-synth-stages"><div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', minWidth: 720 }}>
+          {STAGES.map((s, i) => {
+            const state = i < stage ? 'done' : i === stage ? 'active' : 'pending';
+            return (
+              <div key={s.id} style={{ padding: 18, borderRight: i < 5 ? '1px solid var(--line)' : 'none', position: 'relative' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{
+                    width: 22, height: 22, borderRadius: '50%',
+                    border: `1.5px solid ${state === 'pending' ? 'var(--line-2)' : 'var(--signal)'}`,
+                    background: state === 'done' ? 'var(--signal)' : 'transparent',
+                    color: state === 'done' ? 'var(--signal-ink)' : 'var(--signal)',
+                    display: 'grid', placeItems: 'center', fontFamily: 'var(--mono)', fontSize: 10,
+                  }} className={state === 'active' ? 'pulse' : ''}>
+                    {state === 'done' ? '✓' : `0${i + 1}`}
+                  </span>
+                  <span className="mono" style={{ fontSize: 10, color: 'var(--ink-faint)', letterSpacing: '0.10em' }}>
+                    {state === 'done' ? 'DONE' : state === 'active' ? 'RUNNING' : 'QUEUED'}
+                  </span>
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 500, marginTop: 12 }}>{s.t}</div>
+                <div style={{ color: 'var(--ink-faint)', fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>{s.d}</div>
+                <div className="mono" style={{ fontSize: 11, color: state === 'active' ? 'var(--signal)' : 'var(--ink-faint)', marginTop: 10 }}>{s.cost.toUpperCase()}</div>
+              </div>
+            );
+          })}
+        </div>
+        </div>
+      </div>
+
+      {/* Three-up: prompt template / key resolution / fanout */}
+      <div className="r-3col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+        <div className="card" style={{ padding: 18, display: 'flex', flexDirection: 'column' }}>
+          <div className="eyebrow">PRE‑SET PROMPT · COMPETITION/DIRECT</div>
+          <div style={{ marginTop: 12, padding: 14, background: 'var(--bg-2)', borderRadius: 6, fontFamily: 'var(--mono)', fontSize: 11, lineHeight: 1.7, color: 'var(--ink-faint)' }}>
+            You are an opinionated strategist.<br/>
+            Given <span style={{ color: 'var(--signal)' }}>{`{{venture.name}}`}</span> operating in <span style={{ color: 'var(--signal)' }}>{`{{geo.primary}}`}</span>,<br/>
+            compare against <span style={{ color: 'var(--signal)' }}>{`{{competitor.lead}}`}</span> on <span style={{ color: 'var(--signal)' }}>{`{{parity.axes}}`}</span>.<br/>
+            Cite founder quote: &ldquo;<span style={{ color: 'var(--signal)' }}>{`{{founder.quote.gap}}`}</span>&rdquo;<br/>
+            Output keys: <span style={{ color: 'var(--signal)' }}>{`narrative.competitive, parity.matrix, verdict.lead`}</span><br/>
+            Style = <span style={{ color: 'var(--signal)' }}>{`{{tenant.tone}}`}</span> · cap 380 words.
+          </div>
+          <span className="mono" style={{ marginTop: 'auto', paddingTop: 14, fontSize: 11, color: 'var(--ink-faint)' }}>VERSION 2026.04 · TENANT‑EDITABLE</span>
+        </div>
+
+        <div className="card" style={{ padding: 18 }}>
+          <div className="eyebrow">CONTENT KEY RESOLUTION</div>
+          <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {[
+              { k: '{{venture.name}}', v: 'Northwind Cargo', src: 'BRIEF' },
+              { k: '{{geo.primary}}', v: 'United States', src: 'GEO' },
+              { k: '{{competitor.lead}}', v: 'KeepTruckin', src: 'INTERVIEW Q3.2' },
+              { k: '{{founder.quote.gap}}', v: '11‑day onboarding tax', src: 'INTERVIEW Q3.4' },
+              { k: '{{parity.matrix}}', v: '5 axes · 3 firms', src: 'INTERVIEW Q3.5' },
+              { k: '{{tenant.tone}}', v: 'McKinsey · contrarian', src: 'SETTINGS' },
+              { k: '{{narrative.competitive}}', v: 'pending', src: 'DERIVED', pending: true },
+              { k: '{{verdict.lead}}', v: 'pending', src: 'DERIVED', pending: true },
+            ].map((kv) => (
+              <div key={kv.k} style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr auto', gap: 8, alignItems: 'center', padding: '6px 8px', background: 'var(--bg-2)', borderRadius: 4 }}>
+                <span className="mono" style={{ fontSize: 11, color: kv.pending ? 'var(--ink-faint)' : 'var(--signal)' }}>{kv.k}</span>
+                <span className="mono" style={{ fontSize: 11, color: kv.pending ? 'var(--warn)' : 'var(--paper)', textAlign: 'right', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{kv.v}</span>
+                <span className="mono" style={{ fontSize: 9, color: 'var(--ink-faint)' }}>{kv.src}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: 18 }}>
+          <div className="eyebrow">MODULE FANOUT · 24</div>
+          <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
+            {Array.from({ length: 24 }).map((_, i) => {
+              const s = i < (stage * 5) ? 'done' : i < (stage * 5) + 3 ? 'active' : 'pending';
+              return (
+                <div key={i} style={{
+                  aspectRatio: '1', borderRadius: 3,
+                  background: s === 'done' ? 'var(--signal)' : s === 'active' ? 'var(--signal-soft)' : 'var(--bg-2)',
+                  border: `1px solid ${s === 'pending' ? 'var(--line)' : 'var(--signal)'}`,
+                }} className={s === 'active' ? 'pulse' : ''} />
+              );
+            })}
+          </div>
+          <div className="divider" style={{ margin: '14px 0' }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '4px 0' }}><span style={{ color: 'var(--ink-faint)' }}>Modules complete</span><span className="mono">{Math.min(stage * 5, 24)}/24</span></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '4px 0' }}><span style={{ color: 'var(--ink-faint)' }}>Tokens consumed</span><span className="mono">142,308</span></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '4px 0' }}><span style={{ color: 'var(--ink-faint)' }}>Endpoint</span><span className="mono" style={{ color: 'var(--signal)' }}>TENANT · AZURE</span></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '4px 0' }}><span style={{ color: 'var(--ink-faint)' }}>Credits used</span><span className="mono">66 / 500</span></div>
+        </div>
+      </div>
+
+      {/* Stream */}
+      <div className="card" style={{ padding: 0 }}>
+        <div style={{ padding: '12px 18px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center' }}>
+          <span style={{ fontWeight: 500 }}>Agent stream</span>
+          <span className="mono" style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--signal)' }}><span className="dot pulse" style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'var(--signal)', marginRight: 6 }} /> LIVE</span>
+        </div>
+        <div style={{ padding: 14, fontFamily: 'var(--mono)', fontSize: 11, lineHeight: 1.85, color: 'var(--ink-faint)', maxHeight: 220, overflow: 'auto' }}>
+          {[
+            ['00:00', 'memory.load', 'loaded 52 answers, 3 artifacts (signals=53)'],
+            ['00:01', 'router.classify', '→ 8 clusters, 24 modules, 6 reports'],
+            ['00:03', 'keys.extract', '142 keys identified · 138 resolved · 4 pending'],
+            ['00:05', 'module.synth', 'positioning.audience → narrative ✓'],
+            ['00:06', 'module.synth', 'positioning.promise → narrative ✓'],
+            ['00:08', 'module.synth', 'competition.direct → parity.matrix ✓'],
+            ['00:09', 'module.synth', 'competition.direct → narrative.competitive ✓'],
+            ['00:11', 'reducer.merge', 'verdict.lead = "Northwind"', 'signal'],
+            ['00:13', 'render.queue', 'competitive (35 cr) · gtm (60 cr) · investor (90 cr)'],
+          ].map((row, i) => (
+            <div key={i} style={{ display: 'grid', gridTemplateColumns: '60px 180px 1fr', gap: 14 }}>
+              <span>{row[0]}</span>
+              <span style={{ color: 'var(--paper)' }}>{row[1]}</span>
+              <span style={{ color: row[3] === 'signal' ? 'var(--signal)' : 'var(--ink-faint)' }}>{row[2]}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+window.Synthesis = Synthesis;
+Object.assign(window, { Synthesis });
+
+</script>
+<script type="text/babel" data-file="view-outputs.jsx">
+/* global React, I, useApp, REPORTS */
+const { I, Icon, CLUSTERS, REPORTS, ACTIVITY, AppCtx, AppProvider, useApp } = window;
+const { useState, useEffect, useMemo, useRef, createContext, useContext, Fragment } = React;
+
+function Outputs() {
+  const { setAppView, setActiveReport } = useApp();
+  const [activeMod, setActiveMod] = React.useState('competition.direct');
+
+  const MODULES = [
+    { id: 'positioning.audience', cluster: 'Positioning', name: 'Audience', state: 'ready', q: 6, conf: 92 },
+    { id: 'positioning.promise', cluster: 'Positioning', name: 'Promise', state: 'ready', q: 4, conf: 88 },
+    { id: 'positioning.proof', cluster: 'Positioning', name: 'Proof', state: 'ready', q: 3, conf: 81 },
+    { id: 'market.sizing', cluster: 'Market & TAM', name: 'Sizing', state: 'ready', q: 5, conf: 76 },
+    { id: 'market.segments', cluster: 'Market & TAM', name: 'Segments', state: 'ready', q: 4, conf: 84 },
+    { id: 'market.geo', cluster: 'Market & TAM', name: 'Geography', state: 'ready', q: 3, conf: 79 },
+    { id: 'competition.direct', cluster: 'Competition', name: 'Direct', state: 'ready', q: 4, conf: 90 },
+    { id: 'competition.indirect', cluster: 'Competition', name: 'Indirect', state: 'partial', q: 2, conf: 58 },
+    { id: 'competition.subs', cluster: 'Competition', name: 'Substitutes', state: 'pending', q: 0, conf: 0 },
+    { id: 'gtm.channels', cluster: 'GTM', name: 'Channels', state: 'pending', q: 0, conf: 0 },
+  ];
+
+  return (
+    <div className="r-outputs-grid" style={{ display: 'grid', gridTemplateColumns: '300px 1fr', minHeight: '100%', maxHeight: 'calc(100vh - 53px)' }}>
+      {/* Module list */}
+      <aside style={{ borderRight: '1px solid var(--line)', overflow: 'auto', padding: 14 }}>
+        <div className="eyebrow" style={{ padding: '4px 6px' }}>MODULES · 24</div>
+        <div style={{ marginTop: 6 }}>
+          {MODULES.map((m) => {
+            const on = m.id === activeMod;
+            return (
+              <div key={m.id} onClick={() => setActiveMod(m.id)} style={{
+                padding: 10, borderRadius: 6, cursor: 'pointer',
+                background: on ? 'var(--bg-2)' : 'transparent',
+                border: `1px solid ${on ? 'var(--line-2)' : 'transparent'}`,
+                marginBottom: 4,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: m.state === 'ready' ? 'var(--signal)' : m.state === 'partial' ? 'var(--warn)' : 'var(--ink-faint)'
+                  }} />
+                  <span style={{ fontSize: 13, fontWeight: on ? 500 : 400 }}>{m.name}</span>
+                  <span className="mono" style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--ink-faint)' }}>
+                    {m.state === 'ready' ? `${m.conf}%` : m.state === 'partial' ? 'PARTIAL' : 'PENDING'}
+                  </span>
+                </div>
+                <div className="mono" style={{ fontSize: 10, color: 'var(--ink-faint)', marginTop: 4, paddingLeft: 16 }}>
+                  {m.cluster.toUpperCase()}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </aside>
+
+      {/* Module detail */}
+      <main style={{ overflow: 'auto', padding: 28 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span className="tag signal"><span className="dot" /> COMPETITION</span>
+          <span className="tag">DIRECT</span>
+          <span className="tag">90% CONFIDENCE</span>
+          <div style={{ flex: 1 }} />
+          <button className="btn sm">Re‑synthesize · 8 cr</button>
+          <button className="btn sm">Edit prompts</button>
+          <button className="btn primary sm" onClick={() => { setActiveReport('competitive'); setAppView('report-detail'); }}>
+            Use in report {I.arrow}
+          </button>
+        </div>
+
+        <h1 style={{ fontSize: 32, fontWeight: 500, letterSpacing: '-0.02em', margin: '20px 0 6px' }}>
+          Direct competitor analysis
+        </h1>
+        <p style={{ color: 'var(--ink-faint)', margin: 0, maxWidth: 720 }}>
+          Synthesized from 4 answers + 3 competitor URLs. Numeric scores are normalized; narrative quotes are verbatim from your interview.
+        </p>
+
+        {/* synthesized panels */}
+        <div className="r-2col" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 16, marginTop: 28 }}>
+          <div className="card" style={{ padding: 22 }}>
+            <div className="eyebrow">NARRATIVE</div>
+            <p style={{ fontSize: 15, lineHeight: 1.6, marginTop: 10 }}>
+              The leading incumbent (<span className="mono" style={{ color: 'var(--signal)' }}>KeepTruckin</span>) optimizes for fleets above 80 vehicles where a dispatcher role exists.
+              Below that threshold, its workflow demands a coordinator the operator must impersonate — a hidden tax of an estimated
+              <span className="mono" style={{ color: 'var(--signal)' }}> 11 days</span> to first useful dispatch. Northwind&apos;s wedge is to remove that role entirely
+              by collapsing dispatch, IFTA, and DOT compliance into a single mobile inbox.
+            </p>
+            <div className="divider" style={{ margin: '16px 0' }} />
+            <div className="eyebrow">SOURCE QUOTES</div>
+            <ol style={{ paddingLeft: 18, color: 'var(--ink-faint)', fontSize: 13, lineHeight: 1.6 }}>
+              <li>&ldquo;Onboarding takes 11 days&rdquo; <span className="mono" style={{ marginLeft: 6, color: 'var(--ink-faint)' }}>· Q3.4</span></li>
+              <li>&ldquo;Solo owner‑operators have to fake a dispatcher&rdquo; <span className="mono" style={{ marginLeft: 6, color: 'var(--ink-faint)' }}>· Q3.4</span></li>
+              <li>&ldquo;Pricing tiers start at $39/truck&rdquo; <span className="mono" style={{ marginLeft: 6, color: 'var(--ink-faint)' }}>· KT pricing page</span></li>
+            </ol>
+          </div>
+
+          <div className="card" style={{ padding: 22 }}>
+            <div className="eyebrow">PARITY MATRIX</div>
+            <table className="cmp" style={{ marginTop: 10 }}>
+              <thead><tr><th>Axis</th><th>NW</th><th>KT</th><th>SAM</th></tr></thead>
+              <tbody>
+                {[
+                  ['Mobile UX', 5, 3, 2],
+                  ['Onboarding', 5, 2, 1],
+                  ['Pricing', 4, 3, 2],
+                  ['IFTA auto', 4, 2, 1],
+                  ['Support', 3, 4, 5],
+                ].map((row) => (
+                  <tr key={row[0]}>
+                    <td>{row[0]}</td>
+                    {row.slice(1).map((v, i) => (
+                      <td key={i} className="mono">
+                        <span style={{ color: v >= 4 ? 'var(--signal)' : v <= 2 ? 'var(--warn)' : 'var(--paper)' }}>{v}</span>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* prompt fill */}
+        <div className="card" style={{ padding: 22, marginTop: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span className="eyebrow">FILLED PROMPT KEYS</span>
+            <span className="mono" style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--ink-faint)' }}>14 KEYS · USED IN 4 REPORTS</span>
+          </div>
+          <div className="r-2col" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginTop: 14 }}>
+            {[
+              ['{{competitor.lead}}', 'KeepTruckin'],
+              ['{{competitor.lead.tier}}', '$39/truck/mo'],
+              ['{{incumbent.gap}}', 'no‑dispatcher workflow'],
+              ['{{onboarding.days}}', '11'],
+              ['{{wedge.fleet_size}}', '1–8 trucks'],
+              ['{{parity.us.mobile_ux}}', '5/5'],
+              ['{{parity.kt.mobile_ux}}', '3/5'],
+              ['{{narrative.style}}', 'mckinsey · contrarian'],
+            ].map(([k, v]) => (
+              <div key={k} style={{ display: 'flex', gap: 12, padding: '8px 10px', background: 'var(--bg-2)', borderRadius: 4, fontSize: 12 }}>
+                <span className="mono" style={{ color: 'var(--signal)', minWidth: 200 }}>{k}</span>
+                <span className="mono" style={{ color: 'var(--paper)', flex: 1, textAlign: 'right' }}>{v}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+window.Outputs = Outputs;
+Object.assign(window, { Outputs });
+
+</script>
+<script type="text/babel" data-file="view-reports.jsx">
+/* global React, I, useApp, REPORTS */
+const { I, Icon, CLUSTERS, REPORTS, ACTIVITY, AppCtx, AppProvider, useApp } = window;
+const { useState, useEffect, useMemo, useRef, createContext, useContext, Fragment } = React;
+
+function Reports() {
+  const { setActiveReport, setAppView, credits } = useApp();
+  const [filter, setFilter] = React.useState('all');
+
+  const TEMPLATES = [
+    { id: 'mck', name: 'Consulting deliverable', sub: 'McKinsey‑ish · 2 col grid', system: true },
+    { id: 'pitch', name: 'Pitch deck', sub: 'Slide‑per‑theme · 16:9', system: true },
+    { id: 'editorial', name: 'Editorial brief', sub: 'Magazine layout · serif', system: true },
+    { id: 'custom', name: 'Northwind house', sub: 'Uploaded · 2 weeks ago', system: false },
+  ];
+
+  return (
+    <div style={{ padding: 28, display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline' }}>
+        <div>
+          <div className="eyebrow">REPORTS · CYCLE 02</div>
+          <h1 style={{ fontSize: 32, fontWeight: 500, letterSpacing: '-0.02em', margin: '8px 0 0' }}>Render. Ship. Spend wisely.</h1>
+        </div>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+          {['all', 'free', 'pro', 'premium', 'rendered'].map((f) => (
+            <button key={f} className="btn sm" onClick={() => setFilter(f)} style={{
+              borderColor: filter === f ? 'var(--signal)' : 'var(--line)',
+              background: filter === f ? 'var(--signal-soft)' : 'var(--bg-2)',
+            }}>{f.toUpperCase()}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Templates */}
+      <div className="card" style={{ padding: 0 }}>
+        <div style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--line)' }}>
+          <span style={{ fontWeight: 500 }}>Templates</span>
+          <span className="mono" style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--ink-faint)' }}>3 SYSTEM · 1 CUSTOM</span>
+          <button className="btn sm" style={{ marginLeft: 12 }}>{I.upload} Upload</button>
+        </div>
+        <div className="r-cards-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 0 }}>
+          {TEMPLATES.map((t, i) => (
+            <div key={t.id} style={{ padding: 18, borderRight: i < 3 ? '1px solid var(--line)' : 'none' }}>
+              <div className="placeholder" style={{ height: 90, marginBottom: 12 }}>{t.name.toUpperCase()}</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <span style={{ fontSize: 13, fontWeight: 500 }}>{t.name}</span>
+                <span className="tag">{t.system ? 'SYSTEM' : 'CUSTOM'}</span>
+              </div>
+              <div className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)', marginTop: 4 }}>{t.sub.toUpperCase()}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Reports grid */}
+      <div className="r-cards-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+        {window.REPORTS.map((r) => (
+          <div key={r.id} className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            {/* Preview */}
+            <div style={{ position: 'relative', borderBottom: '1px solid var(--line)' }}>
+              <div className="placeholder" style={{ height: 180, borderRadius: 0, border: 'none' }}>
+                {r.name.toUpperCase()} · PREVIEW
+              </div>
+              {r.locked && (
+                <div style={{
+                  position: 'absolute', inset: 0, background: 'rgba(10,10,11,0.55)',
+                  backdropFilter: 'blur(2px)', display: 'grid', placeItems: 'center'
+                }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                    <span style={{ color: 'var(--signal)' }}>{I.lock}</span>
+                    <span className="mono" style={{ fontSize: 11, color: 'var(--paper)', letterSpacing: '0.10em' }}>{r.cost} CR TO UNLOCK</span>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div style={{ padding: 18, flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span className={`tag ${r.locked ? '' : 'signal'}`}>
+                  {r.locked ? I.lock : <span className="dot" />} {r.tier}
+                </span>
+                <span className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)' }}>{r.pages}P · HTML/PDF</span>
+              </div>
+              <div style={{ fontSize: 17, fontWeight: 500, letterSpacing: '-0.01em' }}>{r.name}</div>
+              <div style={{ color: 'var(--ink-faint)', fontSize: 13, lineHeight: 1.5, flex: 1 }}>{r.desc}</div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6 }}>
+                {r.locked ? (
+                  <button className="btn primary sm" disabled={credits < r.cost} onClick={() => { setActiveReport(r.id); setAppView('report-detail'); }}>
+                    {I.unlock} Render · {r.cost} cr
+                  </button>
+                ) : (
+                  <button className="btn sm" onClick={() => { setActiveReport(r.id); setAppView('report-detail'); }}>Open {I.arrow}</button>
+                )}
+                <button className="btn sm">{I.doc} Preview</button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Report detail — paper view
+function ReportDetail() {
+  const { activeReport, setAppView, credits, setCredits, toast } = useApp();
+  const r = window.REPORTS.find((x) => x.id === activeReport) || window.REPORTS[0];
+  const [rendered, setRendered] = React.useState(!r.locked);
+  const [rendering, setRendering] = React.useState(false);
+
+  const render = () => {
+    if (credits < r.cost) { toast('Top up — credits below cost'); return; }
+    setRendering(true);
+    setTimeout(() => {
+      setCredits(credits - r.cost);
+      setRendering(false);
+      setRendered(true);
+      toast(`${r.name} rendered · ${r.cost} cr deducted`);
+    }, 1600);
+  };
+
+  return (
+    <div className="r-reports-detail" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', minHeight: '100%', maxHeight: 'calc(100vh - 53px)' }}>
+      {/* Paper */}
+      <main style={{ overflow: 'auto', background: '#1A1A1D', padding: 28 }}>
+        <div style={{ maxWidth: 880, margin: '0 auto' }} className="on-paper-scroll">
+          <div className="card paper" style={{ padding: 0, overflow: 'hidden', position: 'relative' }}>
+            {/* paper header */}
+            <div style={{ padding: '36px 56px', borderBottom: '1px solid var(--line-paper)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span style={{ color: 'var(--ink)' }}>{I.logo(20)}</span>
+                <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--ink)' }}>VentureCraft</span>
+                <span className="mono" style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--ink-mute)' }}>NORTHWIND CARGO · APR 2026 · CYCLE 02</span>
+              </div>
+              <div style={{ marginTop: 28 }}>
+                <div className="eyebrow on-paper">{r.tier.toUpperCase()} · {r.pages} PAGES</div>
+                <h1 style={{ fontSize: 56, lineHeight: 1.0, letterSpacing: '-0.03em', fontWeight: 500, color: 'var(--ink)', margin: '14px 0 12px' }}>
+                  {r.name}.
+                </h1>
+                <p style={{ color: 'var(--ink-mute)', fontSize: 16, maxWidth: 560, margin: 0, lineHeight: 1.5 }}>
+                  {r.desc}
+                </p>
+              </div>
+            </div>
+
+            {/* paper body — preview if locked */}
+            {!rendered ? (
+              <div style={{ padding: '56px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
+                <div style={{ width: 56, height: 56, borderRadius: '50%', border: '1.5px solid var(--ink)', display: 'grid', placeItems: 'center', color: 'var(--ink)' }}>{I.lock}</div>
+                <div style={{ color: 'var(--ink)', fontSize: 22, fontWeight: 500 }}>Render this report</div>
+                <div style={{ color: 'var(--ink-mute)', fontSize: 14, textAlign: 'center', maxWidth: 420, lineHeight: 1.5 }}>
+                  Costs <span className="mono" style={{ color: 'var(--ink)' }}>{r.cost} credits</span>. Includes editable HTML, print PDF, and prompt‑graph receipts. Re‑renders in this cycle are free.
+                </div>
+                <button className="btn primary on-paper lg" onClick={render} disabled={rendering}>
+                  {rendering ? 'Rendering…' : <>Render report · {r.cost} cr {I.arrow}</>}
+                </button>
+                <span className="mono" style={{ fontSize: 11, color: 'var(--ink-mute)' }}>BALANCE AFTER · {credits - r.cost} CR</span>
+              </div>
+            ) : (
+              <div style={{ padding: '40px 56px 56px', display: 'flex', flexDirection: 'column', gap: 28 }}>
+                {/* TOC */}
+                <div>
+                  <div className="eyebrow on-paper">CONTENTS</div>
+                  <ol className="r-2col" style={{ listStyle: 'none', padding: 0, margin: '12px 0 0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 24px' }}>
+                    {['Executive summary', 'Direct landscape', 'Indirect & substitutes', 'Pricing matrix', 'Narrative map', 'Defensibility', 'Risks', 'Appendix · sources'].map((s, i) => (
+                      <li key={s} style={{ display: 'flex', gap: 10, color: 'var(--ink)', fontSize: 14, paddingBottom: 6, borderBottom: '1px dashed var(--line-paper)' }}>
+                        <span className="mono" style={{ color: 'var(--ink-mute)', width: 24 }}>0{i + 1}</span>
+                        <span style={{ flex: 1 }}>{s}</span>
+                        <span className="mono" style={{ color: 'var(--ink-mute)' }}>{(i * 2 + 3).toString().padStart(2, '0')}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+
+                {/* Section */}
+                <div>
+                  <div className="eyebrow on-paper">01 · EXECUTIVE SUMMARY</div>
+                  <h2 style={{ fontSize: 30, color: 'var(--ink)', letterSpacing: '-0.02em', fontWeight: 500, margin: '10px 0 14px', lineHeight: 1.15 }}>
+                    Below 10 trucks, no software actually fits.
+                  </h2>
+                  <div style={{ columnCount: 2, columnGap: 28, color: 'var(--ink)', fontSize: 14, lineHeight: 1.6 }}>
+                    <p>The fleet management category is structurally mis‑built for owner‑operators. KeepTruckin and Samsara optimize for organizations with a dispatcher role; below 10 trucks, that role doesn’t exist, and operators must impersonate it — an estimated 11‑day setup tax.</p>
+                    <p>Northwind&apos;s wedge collapses dispatch, IFTA, and DOT compliance into a single mobile inbox. The parity matrix shows clear leadership in mobile UX (5 vs 3) and onboarding speed (5 vs 2), trailing only in support coverage where incumbents have invested for a decade.</p>
+                  </div>
+                </div>
+
+                {/* Pull quote */}
+                <div style={{ padding: 28, borderLeft: '4px solid var(--ink)', background: '#F0F0EB' }}>
+                  <div style={{ fontSize: 22, lineHeight: 1.3, letterSpacing: '-0.01em', color: 'var(--ink)' }}>
+                    &ldquo;Below 80, the workflow assumes a dispatcher exists — solo operators have to fake one.&rdquo;
+                  </div>
+                  <div className="mono" style={{ fontSize: 11, color: 'var(--ink-mute)', marginTop: 12 }}>FOUNDER INTERVIEW · Q3.4</div>
+                </div>
+
+                {/* Parity matrix */}
+                <div>
+                  <div className="eyebrow on-paper">02 · PARITY MATRIX</div>
+                  <table className="cmp paper" style={{ marginTop: 10 }}>
+                    <thead><tr><th>Axis</th><th>Northwind</th><th>KeepTruckin</th><th>Samsara</th><th>Verdict</th></tr></thead>
+                    <tbody>
+                      {[
+                        ['Mobile UX', '5', '3', '2', 'Lead'],
+                        ['Onboarding speed', '5', '2', '1', 'Lead'],
+                        ['Pricing transparency', '4', '3', '2', 'Lead'],
+                        ['IFTA automation', '4', '2', '1', 'Lead'],
+                        ['Customer support', '3', '4', '5', 'Trail'],
+                      ].map((row) => (
+                        <tr key={row[0]}>
+                          <td style={{ color: 'var(--ink)' }}>{row[0]}</td>
+                          <td className="mono" style={{ color: 'var(--ink)' }}>{row[1]}</td>
+                          <td className="mono" style={{ color: 'var(--ink-mute)' }}>{row[2]}</td>
+                          <td className="mono" style={{ color: 'var(--ink-mute)' }}>{row[3]}</td>
+                          <td className="mono" style={{ color: row[4] === 'Lead' ? 'var(--signal-ink)' : 'var(--ink-mute)' }}>{row[4].toUpperCase()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="placeholder on-paper" style={{ height: 220 }}>NARRATIVE MAP · 2D PERCEPTUAL CHART</div>
+
+                <div style={{ padding: 22, border: '1px solid var(--line-paper)', display: 'flex', alignItems: 'center', gap: 18 }}>
+                  <span className="mono" style={{ fontSize: 11, color: 'var(--ink-mute)', letterSpacing: '0.10em', minWidth: 100 }}>NEXT</span>
+                  <div style={{ flex: 1, color: 'var(--ink)' }}>
+                    Continue to <strong>03 · INDIRECT &amp; SUBSTITUTES</strong> — Excel + WhatsApp combinations, broker tools, and owner‑operator forums.
+                  </div>
+                  <button className="btn on-paper">Read on {I.arrow}</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
+
+      {/* Right rail */}
+      <aside style={{ borderLeft: '1px solid var(--line)', overflow: 'auto', padding: 18 }}>
+        <button className="btn sm" onClick={() => setAppView('reports')}>{I.arrowLeft} All reports</button>
+        <div style={{ marginTop: 18 }}>
+          <div className="eyebrow">META</div>
+          <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <Meta k="STATUS" v={rendered ? 'Rendered' : 'Locked'} signal={rendered} />
+            <Meta k="TEMPLATE" v="Consulting · McKinsey" />
+            <Meta k="LENGTH" v={`${r.pages} pages`} />
+            <Meta k="COST" v={r.cost === 0 ? 'Included' : `${r.cost} cr`} />
+            <Meta k="LAST RENDERED" v={rendered ? '2 minutes ago' : '—'} />
+          </div>
+        </div>
+        {rendered && (
+          <>
+            <div className="divider" style={{ margin: '20px 0' }} />
+            <div className="eyebrow">EXPORT</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
+              <button className="btn sm">{I.download} Download PDF</button>
+              <button className="btn sm">{I.doc} Copy HTML link</button>
+              <button className="btn sm">{I.external} Share read‑only</button>
+            </div>
+          </>
+        )}
+        <div className="divider" style={{ margin: '20px 0' }} />
+        <div className="eyebrow">PROMPT GRAPH</div>
+        <div style={{ marginTop: 10, padding: 12, background: 'var(--bg-2)', borderRadius: 6, fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--ink-faint)', lineHeight: 1.6 }}>
+          <span style={{ color: 'var(--signal)' }}>v2026.04 · competitive</span><br/>
+          → fill {`{{competitor.lead}}`}<br/>
+          → fill {`{{incumbent.gap}}`}<br/>
+          → fill {`{{parity.matrix}}`}<br/>
+          → render template · mck<br/>
+          → emit · html · pdf
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+function Meta({ k, v, signal }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px dashed var(--line)' }}>
+      <span className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)', letterSpacing: '0.10em' }}>{k}</span>
+      <span className="mono" style={{ fontSize: 11, color: signal ? 'var(--signal)' : 'var(--paper)' }}>{v.toString().toUpperCase()}</span>
+    </div>
+  );
+}
+
+window.Reports = Reports;
+window.ReportDetail = ReportDetail;
+Object.assign(window, { Reports, ReportDetail });
+
+</script>
+<script type="text/babel" data-file="view-credits-settings.jsx">
+/* global React, I, useApp */
+const { I, Icon, CLUSTERS, REPORTS, ACTIVITY, AppCtx, AppProvider, useApp } = window;
+const { useState, useEffect, useMemo, useRef, createContext, useContext, Fragment } = React;
+
+function Credits() {
+  const { credits, setCredits, planCredits, toast } = useApp();
+  const [plan, setPlan] = React.useState('studio');
+  const [pack, setPack] = React.useState(500);
+
+  const PACKS = [
+    { c: 100, p: 19 }, { c: 500, p: 79, popular: true }, { c: 2000, p: 269 }, { c: 10000, p: 1099 },
+  ];
+  const TX = [
+    { d: 'APR 28', what: 'Render · Competitive Landscape', amt: -35, bal: 180 },
+    { d: 'APR 27', what: 'Render · Snapshot', amt: 0, bal: 215 },
+    { d: 'APR 25', what: 'Top‑up · 250 cr', amt: +250, bal: 215 },
+    { d: 'APR 21', what: 'Re‑synthesize · GTM', amt: -8, bal: -35 },
+    { d: 'APR 18', what: 'Monthly allowance · Studio', amt: +500, bal: -27 },
+    { d: 'APR 12', what: 'Render · GTM Playbook', amt: -60, bal: -527 },
+  ];
+
+  return (
+    <div className="r-pad" style={{ padding: 28, display: 'flex', flexDirection: 'column', gap: 24 }}>
+      {/* Balance + plan */}
+      <div className="r-credits-balance" style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 16 }}>
+        <div className="card" style={{ padding: 24 }}>
+          <div className="eyebrow">CURRENT BALANCE</div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginTop: 14 }}>
+            <span className="mono" style={{ fontSize: 64, letterSpacing: '-0.03em', color: 'var(--signal)', fontWeight: 500 }}>{credits}</span>
+            <span className="mono" style={{ fontSize: 16, color: 'var(--ink-faint)' }}>OF {planCredits} · CR</span>
+          </div>
+          <div className="bar" style={{ marginTop: 14 }}><i style={{ width: `${(credits / planCredits) * 100}%` }} /></div>
+          <div style={{ display: 'flex', gap: 28, marginTop: 18, color: 'var(--ink-faint)', fontSize: 12 }} className="mono">
+            <span>RESETS · MAY 1, 2026</span>
+            <span>ROLLOVER · OFF</span>
+            <span>BURN · 22 CR / DAY</span>
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 22 }}>
+            <button className="btn primary" onClick={() => { setCredits(credits + pack); toast(`Top‑up · ${pack} credits added`); }}>{I.plus} Add {pack} cr</button>
+            <button className="btn">Switch plan</button>
+            <button className="btn ghost">Auto top‑up · OFF</button>
+          </div>
+        </div>
+        <div className="card" style={{ padding: 24 }}>
+          <div className="eyebrow">CURRENT PLAN</div>
+          <div style={{ marginTop: 14, display: 'flex', alignItems: 'baseline', gap: 8 }}>
+            <span style={{ fontSize: 28, fontWeight: 500 }}>Studio</span>
+            <span className="mono" style={{ color: 'var(--ink-faint)' }}>$49 / MO · 500 CR</span>
+          </div>
+          <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <RowKv k="NEXT INVOICE" v="$49.00 · MAY 1" />
+            <RowKv k="PAYMENT" v="VISA ··4242" />
+            <RowKv k="STRIPE" v="acct_1Pn… · LIVE" />
+            <RowKv k="VAT ID" v="GB287310042" />
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
+            <button className="btn sm">Update card</button>
+            <button className="btn sm">Invoices</button>
+          </div>
+        </div>
+      </div>
+
+      {/* Packs */}
+      <div>
+        <div style={{ display: 'flex', alignItems: 'baseline', marginBottom: 12 }}>
+          <span className="eyebrow">CREDIT PACKS · ONE‑TIME</span>
+          <span className="mono" style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--ink-faint)' }}>STRIPE CHECKOUT · USD</span>
+        </div>
+        <div className="r-cards-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+          {PACKS.map((p) => (
+            <button key={p.c} onClick={() => setPack(p.c)} className="card" style={{
+              padding: 22, textAlign: 'left',
+              borderColor: pack === p.c ? 'var(--signal)' : 'var(--line)',
+              background: pack === p.c ? 'var(--signal-soft)' : 'var(--bg-1)',
+            }}>
+              {p.popular && <div className="mono" style={{ fontSize: 10, color: 'var(--signal)', letterSpacing: '0.10em' }}>BEST VALUE</div>}
+              <div className="mono" style={{ fontSize: 32, marginTop: 10, letterSpacing: '-0.02em' }}>{p.c.toLocaleString()}<span style={{ fontSize: 12, color: 'var(--ink-faint)' }}> CR</span></div>
+              <div style={{ marginTop: 10, color: 'var(--ink-faint)', fontSize: 12 }}>${p.p} <span className="mono" style={{ marginLeft: 6 }}>· ${(p.p / p.c * 100).toFixed(2)}/CR</span></div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Ledger */}
+      <div className="card" style={{ padding: 0 }}>
+        <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center' }}>
+          <span style={{ fontWeight: 500 }}>Ledger</span>
+          <span className="mono" style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--ink-faint)' }}>SYNCED FROM STRIPE · 30 DAYS</span>
+        </div>
+        <table className="cmp">
+          <thead><tr><th>Date</th><th>Activity</th><th style={{ textAlign: 'right' }}>Δ Credits</th><th style={{ textAlign: 'right' }}>Balance</th></tr></thead>
+          <tbody>
+            {TX.map((t, i) => (
+              <tr key={i}>
+                <td className="mono" style={{ color: 'var(--ink-faint)' }}>{t.d}</td>
+                <td>{t.what}</td>
+                <td className="mono" style={{ textAlign: 'right', color: t.amt > 0 ? 'var(--signal)' : t.amt < 0 ? 'var(--paper)' : 'var(--ink-faint)' }}>
+                  {t.amt > 0 ? '+' : ''}{t.amt}
+                </td>
+                <td className="mono" style={{ textAlign: 'right' }}>{Math.max(0, 180 - i * 30)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function RowKv({ k, v }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px dashed var(--line)' }}>
+      <span className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)', letterSpacing: '0.10em' }}>{k}</span>
+      <span className="mono" style={{ fontSize: 12 }}>{v}</span>
+    </div>
+  );
+}
+
+// SETTINGS
+function Settings() {
+  const [tab, setTab] = React.useState('ai');
+  const TABS = [
+    { id: 'workspace', l: 'Workspace' },
+    { id: 'ai', l: 'AI endpoints' },
+    { id: 'templates', l: 'Templates' },
+    { id: 'team', l: 'Team' },
+    { id: 'data', l: 'Data & privacy' },
+    { id: 'webhooks', l: 'Webhooks' },
+  ];
+  return (
+    <div className="r-settings-grid" style={{ display: 'grid', gridTemplateColumns: '220px 1fr', minHeight: '100%', maxHeight: 'calc(100vh - 53px)' }}>
+      <aside style={{ borderRight: '1px solid var(--line)', padding: 14 }}>
+        <div className="eyebrow" style={{ padding: '4px 8px' }}>SETTINGS</div>
+        <div style={{ marginTop: 8 }}>
+          {TABS.map((t) => (
+            <div key={t.id} className={`nav-item ${tab === t.id ? 'active' : ''}`} onClick={() => setTab(t.id)}>{t.l}</div>
+          ))}
+        </div>
+      </aside>
+      <main style={{ overflow: 'auto', padding: 28 }}>
+        {tab === 'ai' && <AIEndpoints />}
+        {tab === 'templates' && <TemplateSettings />}
+        {tab === 'workspace' && <Workspace />}
+        {tab === 'team' && <Team />}
+        {tab === 'data' && <DataPrivacy />}
+        {tab === 'webhooks' && <Webhooks />}
+      </main>
+    </div>
+  );
+}
+
+function AIEndpoints() {
+  const [endpoints, setEndpoints] = React.useState([
+    { id: 1, name: 'Northwind · Azure GPT‑4o', kind: 'azure', model: 'gpt‑4o', status: 'connected', primary: true, used: '142k tokens · 24h' },
+    { id: 2, name: 'Anthropic · Claude Sonnet 4', kind: 'anthropic', model: 'claude‑sonnet‑4', status: 'connected', primary: false, used: '38k tokens · 24h' },
+  ]);
+  const [showAdd, setShowAdd] = React.useState(false);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div>
+        <div className="eyebrow">SETTINGS · AI ENDPOINTS</div>
+        <h1 style={{ fontSize: 28, fontWeight: 500, letterSpacing: '-0.02em', margin: '6px 0 6px' }}>Bring your own model.</h1>
+        <p style={{ color: 'var(--ink-faint)', maxWidth: 560, margin: 0 }}>
+          Plug in your private AI endpoint and we&apos;ll route synthesis through it. Tokens billed by your provider; you only spend VentureCraft credits on rendering and orchestration.
+        </p>
+      </div>
+
+      <div className="card" style={{ padding: 0 }}>
+        <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center' }}>
+          <span style={{ fontWeight: 500 }}>Connected endpoints</span>
+          <span className="mono" style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--ink-faint)' }}>{endpoints.length} ACTIVE</span>
+          <button className="btn sm primary" style={{ marginLeft: 12 }} onClick={() => setShowAdd(true)}>{I.plus} Add endpoint</button>
+        </div>
+        {endpoints.map((e) => (
+          <div key={e.id} style={{ padding: 18, borderBottom: '1px solid var(--line)', display: 'grid', gridTemplateColumns: 'auto 1fr auto auto', gap: 16, alignItems: 'center' }}>
+            <span style={{ width: 40, height: 40, border: '1px solid var(--line)', borderRadius: 6, display: 'grid', placeItems: 'center', color: 'var(--signal)' }}>{I.api}</span>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontWeight: 500, fontSize: 14 }}>{e.name}</span>
+                {e.primary && <span className="tag signal"><span className="dot" /> PRIMARY</span>}
+              </div>
+              <div className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)', marginTop: 4 }}>
+                {e.kind.toUpperCase()} · {e.model.toUpperCase()} · {e.used.toUpperCase()}
+              </div>
+            </div>
+            <span className="tag signal"><span className="dot" /> CONNECTED</span>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button className="btn sm">Test</button>
+              <button className="btn sm">Edit</button>
+            </div>
+          </div>
+        ))}
+        <div style={{ padding: 18, display: 'flex', alignItems: 'center', gap: 14, color: 'var(--ink-faint)' }}>
+          <span>{I.spark}</span>
+          <span style={{ fontSize: 13 }}>Endpoints are encrypted at rest with workspace‑scoped KMS keys. Rotated automatically every 90 days.</span>
+        </div>
+      </div>
+
+      {showAdd && (
+        <div className="card fade-up" style={{ padding: 22 }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <div className="eyebrow">ADD ENDPOINT</div>
+            <button className="btn sm ghost" style={{ marginLeft: 'auto' }} onClick={() => setShowAdd(false)}>{I.x}</button>
+          </div>
+          <div className="r-cards-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginTop: 14 }}>
+            {[
+              { id: 'openai', l: 'OpenAI' }, { id: 'azure', l: 'Azure OpenAI' },
+              { id: 'anthropic', l: 'Anthropic' }, { id: 'openrouter', l: 'OpenRouter' },
+              { id: 'bedrock', l: 'AWS Bedrock' }, { id: 'vertex', l: 'Google Vertex' },
+              { id: 'ollama', l: 'Ollama (self‑host)' }, { id: 'custom', l: 'Custom OpenAI‑compat' },
+            ].map((p) => (
+              <button key={p.id} className="btn">{p.l}</button>
+            ))}
+          </div>
+          <div className="r-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 18 }}>
+            <div><label className="field-label">Display name</label><input className="input" placeholder="Northwind · Azure prod" /></div>
+            <div><label className="field-label">Model id</label><input className="input" placeholder="gpt-4o-2024-11-20" /></div>
+            <div style={{ gridColumn: '1 / -1' }}><label className="field-label">Endpoint URL</label><input className="input" placeholder="https://northwind.openai.azure.com/openai/deployments/…" /></div>
+            <div style={{ gridColumn: '1 / -1' }}><label className="field-label">API key · stored encrypted</label><input className="input" type="password" placeholder="••••••••" /></div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
+            <button className="btn">Test connection</button>
+            <div style={{ flex: 1 }} />
+            <button className="btn ghost" onClick={() => setShowAdd(false)}>Cancel</button>
+            <button className="btn primary">Save endpoint</button>
+          </div>
+        </div>
+      )}
+
+      <div className="card" style={{ padding: 22 }}>
+        <div className="eyebrow">ROUTING</div>
+        <p style={{ color: 'var(--ink-faint)', fontSize: 13, marginTop: 8 }}>Pick which endpoint handles which workload.</p>
+        <div style={{ marginTop: 14 }}>
+          {[
+            { l: 'Interview follow‑ups', e: 'Anthropic · Claude Sonnet 4' },
+            { l: 'Module synthesis', e: 'Northwind · Azure GPT‑4o' },
+            { l: 'Report rendering', e: 'Northwind · Azure GPT‑4o' },
+            { l: 'Embeddings (artifact search)', e: 'OpenAI · text-embedding-3-large' },
+          ].map((r) => (
+            <div key={r.l} className="r-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 12, padding: '10px 0', borderBottom: '1px dashed var(--line)', alignItems: 'center' }}>
+              <span style={{ fontSize: 13 }}>{r.l}</span>
+              <select className="select"><option>{r.e}</option></select>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TemplateSettings() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div>
+        <div className="eyebrow">SETTINGS · REPORT TEMPLATES</div>
+        <h1 style={{ fontSize: 28, fontWeight: 500, letterSpacing: '-0.02em', margin: '6px 0' }}>Tenant report templates.</h1>
+        <p style={{ color: 'var(--ink-faint)', margin: 0 }}>Upload your house style as HTML+CSS or Handlebars. Reports render against your tokens.</p>
+      </div>
+      <div className="card" style={{ padding: 0 }}>
+        {[
+          { n: 'Northwind · house style', t: 'HTML + Handlebars', sz: '38 KB', a: 'PRIMARY' },
+          { n: 'Investor memo · 2026', t: 'HTML + Handlebars', sz: '61 KB', a: 'SECONDARY' },
+          { n: 'McKinsey clone', t: 'SYSTEM', sz: '—', a: 'SYSTEM' },
+        ].map((t, i) => (
+          <div key={i} style={{ padding: 16, borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <span style={{ width: 36, height: 36, border: '1px solid var(--line)', borderRadius: 6, display: 'grid', placeItems: 'center', color: 'var(--ink-faint)' }}>{I.doc}</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 500 }}>{t.n}</div>
+              <div className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)', marginTop: 2 }}>{t.t.toUpperCase()} · {t.sz}</div>
+            </div>
+            <span className="tag">{t.a}</span>
+            <button className="btn sm">Edit keys</button>
+            <button className="btn sm">Preview</button>
+          </div>
+        ))}
+        <div style={{ padding: 16, display: 'flex', gap: 10 }}>
+          <button className="btn">{I.upload} Upload template</button>
+          <button className="btn">Browse marketplace</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Workspace() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div>
+        <div className="eyebrow">SETTINGS · WORKSPACE</div>
+        <h1 style={{ fontSize: 28, fontWeight: 500, letterSpacing: '-0.02em', margin: '6px 0' }}>Tenant profile.</h1>
+      </div>
+      <div className="card r-2col" style={{ padding: 22, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <div><label className="field-label">Workspace name</label><input className="input" defaultValue="Northwind Labs" /></div>
+        <div><label className="field-label">Slug · permanent</label><input className="input" defaultValue="northwind" disabled /></div>
+        <div><label className="field-label">Default tone</label><select className="select"><option>McKinsey · contrarian</option><option>Editorial</option><option>Investor</option></select></div>
+        <div><label className="field-label">Locale</label><select className="select"><option>en‑US</option><option>en‑GB</option></select></div>
+        <div style={{ gridColumn: '1 / -1' }}><label className="field-label">About</label><textarea className="textarea" defaultValue="Studio building category‑defining workflow software for underserved SMB verticals." /></div>
+      </div>
+    </div>
+  );
+}
+
+function Team() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div>
+        <div className="eyebrow">SETTINGS · TEAM</div>
+        <h1 style={{ fontSize: 28, fontWeight: 500, letterSpacing: '-0.02em', margin: '6px 0' }}>Members & roles.</h1>
+      </div>
+      <div className="card" style={{ padding: 0 }}>
+        {[
+          { n: 'Ada Okonkwo', e: 'ada@northwind.co', r: 'Owner', s: 'A' },
+          { n: 'Jonas Linde', e: 'jonas@northwind.co', r: 'Admin', s: 'J' },
+          { n: 'Mei Chen', e: 'mei@northwind.co', r: 'Editor', s: 'M' },
+          { n: 'Outside counsel', e: 'pat@firm.com', r: 'Viewer', s: 'P' },
+        ].map((m, i) => (
+          <div key={i} style={{ padding: 14, borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--bg-3)', display: 'grid', placeItems: 'center', fontWeight: 500 }}>{m.s}</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 500 }}>{m.n}</div>
+              <div className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)' }}>{m.e}</div>
+            </div>
+            <span className="tag">{m.r.toUpperCase()}</span>
+            <button className="btn sm ghost">{I.more}</button>
+          </div>
+        ))}
+        <div style={{ padding: 14 }}><button className="btn">{I.plus} Invite member</button></div>
+      </div>
+    </div>
+  );
+}
+
+function DataPrivacy() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div>
+        <div className="eyebrow">SETTINGS · DATA & PRIVACY</div>
+        <h1 style={{ fontSize: 28, fontWeight: 500, letterSpacing: '-0.02em', margin: '6px 0' }}>What we keep, where, and for how long.</h1>
+      </div>
+      <div className="card" style={{ padding: 22, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <ToggleRow on label="Tenant‑isolated storage" sub="Encrypted at rest with workspace KMS · eu‑west‑2" />
+        <ToggleRow on label="No model training on your data" sub="Always enforced — even for system endpoints" />
+        <ToggleRow label="Auto‑delete artifacts after cycle close" sub="Default 90 days · audit log retained" />
+        <ToggleRow on label="SOC 2 Type II evidence" sub="Available on Firm plan" />
+      </div>
+    </div>
+  );
+}
+
+function ToggleRow({ on = false, label, sub }) {
+  const [v, setV] = React.useState(on);
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '8px 0', borderBottom: '1px dashed var(--line)' }}>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 13, fontWeight: 500 }}>{label}</div>
+        <div style={{ color: 'var(--ink-faint)', fontSize: 12, marginTop: 2 }}>{sub}</div>
+      </div>
+      <button onClick={() => setV(!v)} style={{
+        width: 36, height: 20, borderRadius: 999,
+        background: v ? 'var(--signal)' : 'var(--bg-3)',
+        border: '1px solid var(--line-2)',
+        position: 'relative', cursor: 'pointer',
+      }}>
+        <span style={{
+          position: 'absolute', top: 2, left: v ? 18 : 2,
+          width: 14, height: 14, borderRadius: '50%',
+          background: v ? 'var(--signal-ink)' : 'var(--paper)', transition: 'left 120ms ease',
+        }} />
+      </button>
+    </div>
+  );
+}
+
+function Webhooks() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div>
+        <div className="eyebrow">SETTINGS · WEBHOOKS</div>
+        <h1 style={{ fontSize: 28, fontWeight: 500, letterSpacing: '-0.02em', margin: '6px 0' }}>Wire VentureCraft to your stack.</h1>
+      </div>
+      <div className="card" style={{ padding: 0 }}>
+        {[
+          { url: 'https://n8n.northwind.co/webhook/vc-events', e: 'cycle.complete · report.rendered', s: 'OK · 200ms' },
+          { url: 'https://hooks.slack.com/services/T0…', e: 'report.rendered', s: 'OK · 312ms' },
+          { url: 'https://api.northwind.co/vc-ingest', e: '*', s: 'WARNING · 5xx' },
+        ].map((h, i) => (
+          <div key={i} style={{ padding: 14, borderBottom: '1px solid var(--line)', display: 'grid', gridTemplateColumns: '1fr 240px auto auto', gap: 14, alignItems: 'center' }}>
+            <div className="mono" style={{ fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.url}</div>
+            <div className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)' }}>{h.e.toUpperCase()}</div>
+            <span className="tag" style={{ color: h.s.includes('WARN') ? 'var(--warn)' : 'var(--signal)', borderColor: 'currentColor' }}>{h.s}</span>
+            <button className="btn sm ghost">{I.more}</button>
+          </div>
+        ))}
+        <div style={{ padding: 14 }}><button className="btn">{I.plus} Add webhook</button></div>
+      </div>
+    </div>
+  );
+}
+
+window.Credits = Credits;
+window.Settings = Settings;
+Object.assign(window, { Credits, Settings });
+
+</script>
+<script type="text/babel">
+function Root() {
+  const W = window;
+  const { route, appView } = W.useApp();
+  const Landing = W.Landing, Signup = W.Signup, Onboarding = W.Onboarding, AppShell = W.AppShell;
+  if (route === 'landing') return <Landing />;
+  if (route === 'signup') return <Signup />;
+  if (route === 'onboarding') return <Onboarding />;
+  const map = {
+    dashboard: W.Dashboard, venture: W.Venture, questions: W.Interview,
+    synthesis: W.Synthesis, outputs: W.Outputs, reports: W.Reports,
+    'report-detail': W.ReportDetail, credits: W.Credits, settings: W.Settings,
+  };
+  const View = map[appView] || W.Dashboard;
+  return <AppShell><View /></AppShell>;
+}
+function App() {
+  const AP = window.AppProvider;
+  return <AP><Root /></AP>;
+}
+setTimeout(() => {
+  ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+}, 50);
+</script>
+</body>
+</html>

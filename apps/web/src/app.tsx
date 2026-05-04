@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { MarketingLayout } from './layouts/MarketingLayout';
 import { AppLayout } from './layouts/AppLayout';
+import { AuthLayout } from './layouts/AuthLayout';
 import { Home } from './pages/marketing/Home';
 import { Pricing } from './pages/marketing/Pricing';
 import { Help } from './pages/marketing/Help';
@@ -16,6 +17,7 @@ import { StakeholderPortal } from './pages/stakeholder/StakeholderPortal';
 import { Dashboard } from './pages/app/Dashboard';
 import { Ventures } from './pages/app/Ventures';
 import { VentureNew } from './pages/app/VentureNew';
+import { WorkspaceNew } from './pages/app/WorkspaceNew';
 import { VentureDetail } from './pages/app/VentureDetail';
 import { Interview } from './pages/app/Interview';
 import { Synthesis } from './pages/app/Synthesis';
@@ -63,10 +65,6 @@ export const App = (): JSX.Element => (
         <Route path="/legal/:slug" element={<Legal />} />
         <Route path="/status" element={<Status />} />
         <Route path="/developers/docs" element={<Developers />} />
-        <Route path="/sign-in" element={<SignIn />} />
-        <Route path="/sign-up" element={<SignUp />} />
-        <Route path="/auth/callback/magic" element={<MagicCallback />} />
-        <Route path="/auth/callback/google" element={<GoogleCallback />} />
         <Route path="/s/:token" element={<StakeholderPortal />} />
 
         <Route path="/errors/403" element={<ForbiddenPage />} />
@@ -77,7 +75,15 @@ export const App = (): JSX.Element => (
         <Route path="/errors/read-only" element={<ReadOnlyPage />} />
       </Route>
 
+      <Route element={<AuthLayout />}>
+        <Route path="/sign-in" element={<SignIn />} />
+        <Route path="/sign-up" element={<SignUp />} />
+        <Route path="/auth/callback/magic" element={<MagicCallback />} />
+        <Route path="/auth/callback/google" element={<GoogleCallback />} />
+      </Route>
+
       <Route element={<AppLayout />}>
+        <Route path="/workspaces/new" element={<WorkspaceNew />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/ventures" element={<Ventures />} />
         <Route path="/ventures/new" element={<VentureNew />} />
