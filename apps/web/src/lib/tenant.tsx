@@ -32,12 +32,15 @@ export const TenantProvider = ({ children }: { children: ReactNode }): JSX.Eleme
   const { user } = useAuth();
   const [tenants, setTenants] = useState<TenantSummary[]>([]);
   const [current, setCurrentState] = useState<TenantSummary | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  // Start `true` so the workspace-list-empty redirect in AppLayout doesn't
+  // race the first /v1/tenants fetch on hard reload.
+  const [loading, setLoading] = useState<boolean>(true);
 
   const refresh = useCallback(async () => {
     if (!user) {
       setTenants([]);
       setCurrentState(null);
+      setLoading(false);
       return;
     }
     setLoading(true);

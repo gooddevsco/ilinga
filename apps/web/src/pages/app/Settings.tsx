@@ -6,10 +6,12 @@ import {
   Card,
   CardBody,
   CardHeader,
+  Eyebrow,
   Field,
   Input,
   Modal,
   Skeleton,
+  cn,
   useToast,
 } from '@ilinga/ui';
 import { api, type ApiError } from '../../lib/api';
@@ -17,38 +19,76 @@ import { useAuth } from '../../lib/auth';
 import { useTenant } from '../../lib/tenant';
 import { formatDateTZ } from '../../lib/format';
 
-const tabs = [
-  { to: '/settings/profile', label: 'Profile' },
-  { to: '/settings/workspace', label: 'Workspace' },
-  { to: '/settings/team', label: 'Team' },
-  { to: '/settings/billing', label: 'Billing' },
-  { to: '/settings/ai', label: 'AI endpoints' },
-  { to: '/settings/webhooks', label: 'Webhooks' },
-  { to: '/settings/api-tokens', label: 'API tokens' },
-  { to: '/settings/sessions', label: 'Sessions' },
-  { to: '/settings/security', label: 'Security' },
-  { to: '/settings/privacy', label: 'Privacy' },
+const tabs: { to: string; label: string; section: 'You' | 'Workspace' | 'Plumbing' }[] = [
+  { to: '/settings/profile', label: 'Profile', section: 'You' },
+  { to: '/settings/sessions', label: 'Sessions', section: 'You' },
+  { to: '/settings/security', label: 'Security', section: 'You' },
+  { to: '/settings/privacy', label: 'Privacy', section: 'You' },
+  { to: '/settings/workspace', label: 'Workspace', section: 'Workspace' },
+  { to: '/settings/team', label: 'Team', section: 'Workspace' },
+  { to: '/settings/billing', label: 'Billing', section: 'Workspace' },
+  { to: '/settings/api-requests', label: 'API requests', section: 'Workspace' },
+  { to: '/settings/ai', label: 'AI endpoints', section: 'Plumbing' },
+  { to: '/settings/webhooks', label: 'Webhooks', section: 'Plumbing' },
+  { to: '/settings/api-tokens', label: 'API tokens', section: 'Plumbing' },
 ];
 
+const SettingsNav = (): JSX.Element => {
+  const sections: Array<'You' | 'Workspace' | 'Plumbing'> = ['You', 'Workspace', 'Plumbing'];
+  return (
+    <nav
+      className="r-side-rail flex flex-col gap-1 rounded-md border border-[color:var(--line)] bg-[color:var(--bg-1)] p-3"
+      style={{ alignSelf: 'start', minWidth: 220 }}
+      aria-label="Settings"
+    >
+      {sections.map((sec) => (
+        <div key={sec}>
+          <div className="nav-section">{sec}</div>
+          {tabs
+            .filter((t) => t.section === sec)
+            .map((t) => (
+              <NavLink
+                key={t.to}
+                to={t.to}
+                className={({ isActive }) => cn('nav-item', isActive && 'active')}
+              >
+                {t.label}
+              </NavLink>
+            ))}
+        </div>
+      ))}
+    </nav>
+  );
+};
+
 export const SettingsLayout = (): JSX.Element => (
-  <div className="space-y-6">
-    <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-    <div className="-mx-4 overflow-x-auto md:mx-0">
-      <div className="flex gap-6 border-b border-[color:var(--color-border)] px-4 text-sm md:px-0">
+  <div className="flex flex-col gap-5">
+    <header>
+      <Eyebrow>Settings</Eyebrow>
+      <h1
+        className="serif mt-1 text-[28px] tracking-tight"
+        style={{ fontWeight: 500, letterSpacing: '-0.02em' }}
+      >
+        Tune the workspace.
+      </h1>
+    </header>
+    <div className="r-settings-grid grid gap-5" style={{ gridTemplateColumns: '220px 1fr' }}>
+      <SettingsNav />
+      <div className="r-nav-row -mx-1 mb-3 flex gap-2 overflow-x-auto px-1 md:hidden">
         {tabs.map((t) => (
           <NavLink
             key={t.to}
             to={t.to}
-            className={({ isActive }) =>
-              `whitespace-nowrap border-b-2 pb-3 ${isActive ? 'border-[color:var(--color-fg)]' : 'border-transparent text-[color:var(--color-fg-muted)]'}`
-            }
+            className={({ isActive }) => cn('btn sm', isActive && 'primary')}
           >
             {t.label}
           </NavLink>
         ))}
       </div>
+      <div className="min-w-0">
+        <Outlet />
+      </div>
     </div>
-    <Outlet />
   </div>
 );
 

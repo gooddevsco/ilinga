@@ -6,23 +6,17 @@ export const Card = ({
   children,
   ...rest
 }: HTMLAttributes<HTMLDivElement>): JSX.Element => (
-  <div
-    className={cn(
-      'rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-bg)] shadow-[var(--shadow-sm)]',
-      className,
-    )}
-    {...rest}
-  >
+  <div className={cn('card', className)} {...rest}>
     {children}
   </div>
 );
 
 export const CardHeader = ({ children }: { children: ReactNode }): JSX.Element => (
-  <div className="border-b border-[color:var(--color-border)] px-5 py-4 text-sm font-semibold text-[color:var(--color-fg)]">
+  <div className="border-b border-[color:var(--line)] px-5 py-4 text-sm font-semibold text-[color:var(--ink)]">
     {children}
   </div>
 );
 
 export const CardBody = ({ children }: { children: ReactNode }): JSX.Element => (
-  <div className="px-5 py-4 text-sm text-[color:var(--color-fg)]">{children}</div>
+  <div className="px-5 py-4 text-sm text-[color:var(--ink)]">{children}</div>
 );

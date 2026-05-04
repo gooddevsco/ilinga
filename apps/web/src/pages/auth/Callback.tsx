@@ -1,20 +1,40 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Button, Eyebrow } from '@ilinga/ui';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
-import { useTenant } from '../../lib/tenant';
 
-interface VerifyResult {
-  ok: boolean;
-  purpose: string;
-  invitedTenantId: string | null;
-  invitedRole: string | null;
-}
+const Status = ({
+  eyebrow,
+  title,
+  body,
+  spinner,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  body?: string;
+  spinner?: boolean;
+  children?: React.ReactNode;
+}): JSX.Element => (
+  <div className="fade-up flex w-full max-w-[440px] flex-col gap-5">
+    <Eyebrow>{eyebrow}</Eyebrow>
+    <h1 className="serif text-[36px] tracking-tight" style={{ fontWeight: 500, lineHeight: 1.05 }}>
+      {title}
+    </h1>
+    {spinner && (
+      <div className="flex items-center gap-2 text-[13px] text-[color:var(--ink-mute)]">
+        <span className="spinner" /> Signing you in…
+      </div>
+    )}
+    {body && <p className="text-[14px] text-[color:var(--ink-mute)]">{body}</p>}
+    {children}
+  </div>
+);
 
 export const MagicCallback = (): JSX.Element => {
   const [params] = useSearchParams();
-  const { refresh: refreshAuth } = useAuth();
-  const { refresh: refreshTenants } = useTenant();
+  const { refresh } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
 
@@ -25,19 +45,10 @@ export const MagicCallback = (): JSX.Element => {
       return;
     }
     void api
-      .post<VerifyResult>('/v1/auth/magic-link/verify', { token })
-      .then(async (verify) => {
-        await refreshAuth();
-        await refreshTenants();
-        if (verify.purpose === 'tenant_invite' && verify.invitedTenantId) {
-          // Land directly on the dashboard of the workspace they were
-          // invited into.
-          navigate('/dashboard', { replace: true });
-        } else if (verify.purpose === 'signup') {
-          navigate('/onboarding/create-workspace', { replace: true });
-        } else {
-          navigate('/dashboard', { replace: true });
-        }
+      .post('/v1/auth/magic-link/verify', { token })
+      .then(async () => {
+        await refresh();
+        navigate('/dashboard', { replace: true });
       })
       .catch((err: { status?: number }) => {
         setError(
@@ -46,35 +57,35 @@ export const MagicCallback = (): JSX.Element => {
             : 'Something went wrong. Please try again.',
         );
       });
-  }, [params, navigate, refreshAuth, refreshTenants]);
+  }, [params, navigate, refresh]);
 
   if (error) {
     return (
-      <div className="mx-auto max-w-md py-16">
-        <h1 className="text-2xl font-semibold">Sign-in failed</h1>
-        <p className="mt-3 text-sm text-[color:var(--color-fg-muted)]">{error}</p>
-      </div>
+      <Status eyebrow="Sign-in failed" title="That didn't work." body={error}>
+        <div className="flex gap-2">
+          <Link to="/sign-in">
+            <Button variant="primary" type="button">
+              Try again
+            </Button>
+          </Link>
+          <Link to="/help/contact">
+            <Button variant="ghost" type="button">
+              Contact support
+            </Button>
+          </Link>
+        </div>
+      </Status>
     );
   }
-  return (
-    <div className="mx-auto max-w-md py-16 text-sm text-[color:var(--color-fg-muted)]">
-      Signing you in…
-    </div>
-  );
+
+  return <Status eyebrow="Verifying" title="One moment…" spinner />;
 };
 
 export const GoogleCallback = (): JSX.Element => {
-  const { refresh: refreshAuth } = useAuth();
-  const { refresh: refreshTenants } = useTenant();
+  const { refresh } = useAuth();
   const navigate = useNavigate();
   useEffect(() => {
-    void Promise.all([refreshAuth(), refreshTenants()]).then(() =>
-      navigate('/dashboard', { replace: true }),
-    );
-  }, [refreshAuth, refreshTenants, navigate]);
-  return (
-    <div className="mx-auto max-w-md py-16 text-sm text-[color:var(--color-fg-muted)]">
-      Finishing sign-in…
-    </div>
-  );
+    void refresh().then(() => navigate('/dashboard', { replace: true }));
+  }, [refresh, navigate]);
+  return <Status eyebrow="Verifying" title="Finishing sign-in…" spinner />;
 };

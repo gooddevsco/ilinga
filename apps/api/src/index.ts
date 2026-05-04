@@ -1,3 +1,4 @@
+import './env-bootstrap.js';
 import { serve } from '@hono/node-server';
 import { buildApp } from './app.js';
 import { config } from './config.js';

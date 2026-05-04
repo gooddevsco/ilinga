@@ -24,7 +24,7 @@
     "@ilinga/eslint-config": "workspace:*",
     "@ilinga/tsconfig": "workspace:*",
     "@types/pg": "^8.11.10",
-    "drizzle-kit": "^0.29.0",
+    "drizzle-kit": "^0.30.6",
     "eslint": "^9.16.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",

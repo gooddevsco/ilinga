@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Badge, Button, Card, CardBody, EmptyState, Skeleton, useToast } from '@ilinga/ui';
+import { Button, Card, EmptyState, Eyebrow, Icons, Skeleton, Tag, useToast } from '@ilinga/ui';
 import { api, type ApiError } from '../../lib/api';
 import { useTenant } from '../../lib/tenant';
 import { formatDateTZ } from '../../lib/format';
@@ -28,11 +28,8 @@ export const Trash = (): JSX.Element => {
   };
   useEffect(refresh, [current]);
 
-  if (!current) return <p className="text-sm text-[color:var(--color-fg-muted)]">No workspace.</p>;
-  if (error) return <p className="text-sm text-[color:var(--color-danger)]">{error}</p>;
-  if (items === null) return <Skeleton height={120} />;
-  if (items.length === 0)
-    return <EmptyState title="Trash is empty" body="Deleted items appear here for the restore window." />;
+  if (!current) return <p className="text-[13px] text-[color:var(--ink-mute)]">No workspace.</p>;
+  if (error) return <p className="text-[13px] text-[color:var(--danger)]">{error}</p>;
 
   const restore = async (id: string): Promise<void> => {
     if (!window.confirm('Restore this item?')) return;
@@ -42,33 +39,67 @@ export const Trash = (): JSX.Element => {
   };
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-semibold tracking-tight">Trash</h1>
-      <ul className="space-y-2">
-        {items.map((t) => (
-          <li key={t.id}>
-            <Card>
-              <CardBody>
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium">
-                      <Badge tone="warning">{t.targetTable}</Badge>{' '}
-                      <code>{t.targetId.slice(0, 8)}…</code>
-                    </p>
-                    <p className="text-xs text-[color:var(--color-fg-muted)]">
-                      Deleted {formatDateTZ(t.deletedAt, 'UTC')} · purged after{' '}
-                      {formatDateTZ(t.restoreDeadline, 'UTC')}
-                    </p>
-                  </div>
-                  <Button size="sm" onClick={() => restore(t.id)}>
-                    Restore
-                  </Button>
-                </div>
-              </CardBody>
-            </Card>
-          </li>
-        ))}
-      </ul>
+    <div className="flex flex-col gap-5">
+      <header>
+        <Eyebrow>Trash</Eyebrow>
+        <h1
+          className="serif mt-1 text-[28px] tracking-tight"
+          style={{ fontWeight: 500, letterSpacing: '-0.02em' }}
+        >
+          Recently deleted.
+        </h1>
+        <p className="mt-1 text-[13px] text-[color:var(--ink-mute)]">
+          Items live here for their restore window before they’re purged.
+        </p>
+      </header>
+
+      {items === null && <Skeleton height={140} />}
+      {items && items.length === 0 && (
+        <Card className="p-8">
+          <EmptyState
+            title="Trash is empty"
+            body="Deleted items appear here for the restore window."
+          />
+        </Card>
+      )}
+      {items && items.length > 0 && (
+        <Card className="overflow-hidden">
+          <table className="cmp">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>ID</th>
+                <th>Deleted</th>
+                <th>Purged after</th>
+                <th className="text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((t) => (
+                <tr key={t.id}>
+                  <td>
+                    <Tag tone="ochre">{t.targetTable.toUpperCase()}</Tag>
+                  </td>
+                  <td className="mono text-[12px] text-[color:var(--ink-mute)]">
+                    {t.targetId.slice(0, 8)}…
+                  </td>
+                  <td className="mono text-[12px] text-[color:var(--ink-mute)]">
+                    {formatDateTZ(t.deletedAt, 'UTC')}
+                  </td>
+                  <td className="mono text-[12px] text-[color:var(--ink-mute)]">
+                    {formatDateTZ(t.restoreDeadline, 'UTC')}
+                  </td>
+                  <td className="text-right">
+                    <Button size="sm" variant="primary" type="button" onClick={() => restore(t.id)}>
+                      <Icons.cycle /> Restore
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      )}
     </div>
   );
 };

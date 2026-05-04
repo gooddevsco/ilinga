@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Badge, Card, CardBody, CardHeader, Skeleton } from '@ilinga/ui';
+import { Button, Card, Eyebrow, Icons, Skeleton, Tag } from '@ilinga/ui';
 import { api, type ApiError } from '../../lib/api';
 import { formatDateTZ } from '../../lib/format';
 import { Comments } from '../../features/comments/Comments';
@@ -24,9 +24,18 @@ interface Render {
   queuedAt: string;
 }
 
+const renderTone = (status: string): 'green' | 'ochre' | 'neutral' => {
+  if (status === 'complete') return 'green';
+  if (status === 'failed' || status === 'error') return 'ochre';
+  return 'neutral';
+};
+
 export const ReportViewer = (): JSX.Element => {
   const { id } = useParams<{ id: string }>();
-  const [data, setData] = useState<{ report: Report; renders: Render[] } | null>(null);
+  const [data, setData] = useState<{
+    report: Report;
+    renders: Render[];
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -37,84 +46,169 @@ export const ReportViewer = (): JSX.Element => {
       .catch((e: ApiError) => setError(`Status ${e.status}`));
   }, [id]);
 
-  if (error) return <p className="text-sm text-[color:var(--color-danger)]">{error}</p>;
-  if (!data) return <Skeleton height={200} />;
+  if (error) return <p className="text-[13px] text-[color:var(--danger)]">{error}</p>;
+  if (!data) return <Skeleton height={400} />;
 
-  // Most recent in-flight render gets a live progress strip; completed ones don't.
   const latest = [...data.renders].sort(
     (a, b) => new Date(b.queuedAt).getTime() - new Date(a.queuedAt).getTime(),
   )[0];
   const liveRender =
     latest && (latest.status === 'queued' || latest.status === 'rendering') ? latest : null;
 
+  const keys = Object.entries(data.report.inputKeySnapshot ?? {});
+
   return (
-    <div className="space-y-6">
-      <header>
-        <Link to="/reports" className="text-xs text-[color:var(--color-fg-muted)]">
+    <div
+      className="r-paper-shell flex flex-col gap-4 p-4 md:p-7"
+      style={{ background: '#1A1A1D', borderRadius: 12 }}
+    >
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <Link
+          to="/reports"
+          className="mono text-[11px] uppercase tracking-[0.10em]"
+          style={{ color: 'rgba(255,255,255,0.6)' }}
+        >
           ← Reports
         </Link>
-        <h1 className="text-2xl font-semibold tracking-tight">{data.report.title}</h1>
-        <p className="text-xs text-[color:var(--color-fg-muted)]">
-          Snapshot taken {formatDateTZ(data.report.createdAt, 'UTC')}
-        </p>
+        <div
+          className="flex items-center gap-2 text-[12px]"
+          style={{ color: 'rgba(255,255,255,0.55)' }}
+        >
+          {liveRender ? (
+            <Tag tone="signal" dot>
+              Rendering…
+            </Tag>
+          ) : (
+            <Tag tone="green">Ready</Tag>
+          )}
+          <span className="mono uppercase tracking-[0.10em]">
+            SNAPSHOT {formatDateTZ(data.report.createdAt, 'UTC')}
+          </span>
+        </div>
       </header>
+
       {liveRender && (
-        <RenderProgress
-          cycleId={data.report.cycleId}
-          reportId={data.report.id}
-          renderId={liveRender.id}
-        />
+        <Card className="p-4">
+          <RenderProgress
+            cycleId={data.report.cycleId}
+            reportId={data.report.id}
+            renderId={liveRender.id}
+          />
+        </Card>
       )}
-      <Card>
-        <CardHeader>Renders</CardHeader>
-        <CardBody>
-          <ul className="space-y-2">
+
+      <div
+        className="r-paper-page mx-auto w-full"
+        style={{
+          background: '#FFFFFF',
+          color: 'var(--ink)',
+          borderRadius: 12,
+          maxWidth: 960,
+          padding: '64px 80px',
+          boxShadow: '0 30px 60px rgba(0,0,0,0.45)',
+        }}
+      >
+        <Eyebrow>Report</Eyebrow>
+        <h1
+          className="serif mt-2 text-[40px] tracking-tight"
+          style={{ fontWeight: 500, lineHeight: 1.1, letterSpacing: '-0.02em' }}
+        >
+          {data.report.title}
+        </h1>
+        <div className="mono mt-2 text-[11px] uppercase tracking-[0.10em] text-[color:var(--ink-faint)]">
+          GENERATED {formatDateTZ(data.report.createdAt, 'UTC')}
+        </div>
+
+        {/* Section: keys */}
+        <section className="mt-10">
+          <Eyebrow>Synthesised keys</Eyebrow>
+          {keys.length === 0 ? (
+            <p className="mt-3 text-[14px] text-[color:var(--ink-mute)]">
+              No keys captured in this snapshot.
+            </p>
+          ) : (
+            <table className="cmp mt-3">
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                {keys.map(([code, value]) => (
+                  <tr key={code}>
+                    <td className="mono text-[11px] text-[color:var(--ink-mute)]">{code}</td>
+                    <td>
+                      <pre
+                        className="whitespace-pre-wrap text-[13px]"
+                        style={{ fontFamily: 'inherit', maxWidth: 640 }}
+                      >
+                        {typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
+                      </pre>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+
+        {/* Section: renders */}
+        <section className="mt-10">
+          <Eyebrow>Renders</Eyebrow>
+          <ul className="mt-3 flex flex-col gap-2">
             {data.renders.map((r) => (
-              <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                <div>
-                  <Badge tone={r.status === 'complete' ? 'success' : 'warning'}>{r.status}</Badge>{' '}
+              <li
+                key={r.id}
+                className="flex flex-wrap items-center justify-between gap-2 border-b border-[color:var(--line)] py-2 text-[13px]"
+              >
+                <div className="flex items-center gap-3">
+                  <Tag tone={renderTone(r.status)}>{r.status.toUpperCase()}</Tag>
                   {r.completedAt && (
-                    <span className="text-[color:var(--color-fg-muted)]">
-                      · completed {formatDateTZ(r.completedAt, 'UTC')}
+                    <span className="text-[color:var(--ink-mute)]">
+                      completed {formatDateTZ(r.completedAt, 'UTC')}
+                    </span>
+                  )}
+                  {r.pageCount != null && (
+                    <span className="mono text-[11px] text-[color:var(--ink-faint)]">
+                      {r.pageCount} PAGES
                     </span>
                   )}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex items-center gap-2">
                   {r.htmlS3Key && (
                     <a
                       href={`/api-proxy/${encodeURIComponent(r.htmlS3Key)}`}
-                      className="text-sm underline"
+                      className="inline-flex"
                     >
-                      HTML
+                      <Button variant="secondary" size="sm" type="button">
+                        <Icons.external /> HTML
+                      </Button>
                     </a>
                   )}
                   {r.pdfS3Key && (
                     <a
                       href={`/api-proxy/${encodeURIComponent(r.pdfS3Key)}`}
-                      className="text-sm underline"
+                      className="inline-flex"
                     >
-                      PDF
+                      <Button variant="primary" size="sm" type="button">
+                        <Icons.download /> PDF
+                      </Button>
                     </a>
                   )}
                 </div>
               </li>
             ))}
           </ul>
-        </CardBody>
-      </Card>
-      <Card>
-        <CardHeader>Input snapshot</CardHeader>
-        <CardBody>
-          <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-xs">
-            {JSON.stringify(data.report.inputKeySnapshot, null, 2)}
-          </pre>
-        </CardBody>
-      </Card>
-      <Card>
-        <CardBody>
-          <Comments target="reports" targetId={data.report.id} cycleId={data.report.cycleId} />
-        </CardBody>
-      </Card>
+        </section>
+
+        <section className="mt-10">
+          <Eyebrow>Comments</Eyebrow>
+          <div className="mt-3">
+            <Comments target="reports" targetId={data.report.id} cycleId={data.report.cycleId} />
+          </div>
+        </section>
+      </div>
     </div>
   );
 };

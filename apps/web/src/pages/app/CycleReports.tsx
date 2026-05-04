@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
-  Badge,
   Button,
   Card,
-  CardBody,
-  CardHeader,
   EmptyState,
+  Eyebrow,
   Field,
+  Icons,
   Input,
   Modal,
   Skeleton,
+  Tag,
   useToast,
 } from '@ilinga/ui';
 import { api, type ApiError } from '../../lib/api';
@@ -26,10 +26,34 @@ interface Report {
 }
 
 const TEMPLATE_CHOICES = [
-  { code: 'investor_pulse', label: 'Investor Pulse', priceLabel: 'Free' },
-  { code: 'gtm_snapshot', label: 'GTM Snapshot', priceLabel: '5 credits' },
-  { code: 'risk_map', label: 'Risk Map', priceLabel: '5 credits' },
-  { code: 'board_brief', label: 'Board Brief', priceLabel: '8 credits' },
+  {
+    code: 'investor_pulse',
+    label: 'Investor Pulse',
+    cost: 0,
+    pages: 4,
+    tier: 'Free' as const,
+  },
+  {
+    code: 'gtm_snapshot',
+    label: 'GTM Snapshot',
+    cost: 5,
+    pages: 6,
+    tier: 'Pro' as const,
+  },
+  {
+    code: 'risk_map',
+    label: 'Risk Map',
+    cost: 5,
+    pages: 6,
+    tier: 'Pro' as const,
+  },
+  {
+    code: 'board_brief',
+    label: 'Board Brief',
+    cost: 8,
+    pages: 8,
+    tier: 'Premium' as const,
+  },
 ];
 
 interface Schedule {
@@ -91,98 +115,147 @@ export const CycleReports = (): JSX.Element => {
   };
 
   if (!current || !vid || !cid) {
-    return <p className="text-sm text-[color:var(--color-fg-muted)]">No workspace selected.</p>;
+    return <p className="text-[13px] text-[color:var(--ink-mute)]">No workspace selected.</p>;
   }
+
   return (
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
+    <div className="flex flex-col gap-6">
+      <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <Link to={`/ventures/${vid}`} className="text-xs text-[color:var(--color-fg-muted)]">
+          <Link
+            to={`/ventures/${vid}`}
+            className="mono text-[11px] uppercase tracking-[0.10em] text-[color:var(--ink-faint)] hover:text-[color:var(--ink)]"
+          >
             ← Venture
           </Link>
-          <h1 className="text-2xl font-semibold tracking-tight">Reports</h1>
+          <h1
+            className="serif mt-1 text-[28px] tracking-tight"
+            style={{ fontWeight: 500, letterSpacing: '-0.02em' }}
+          >
+            Cycle reports
+          </h1>
         </div>
       </header>
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold">Render a new report</h2>
-        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+        <Eyebrow>Templates</Eyebrow>
+        <div
+          className="r-cards-4 mt-3 grid gap-4"
+          style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}
+        >
           {TEMPLATE_CHOICES.map((t) => (
-            <Card key={t.code}>
-              <CardHeader>{t.label}</CardHeader>
-              <CardBody>
-                <p className="text-xs text-[color:var(--color-fg-muted)]">{t.priceLabel}</p>
-                <Button
-                  className="mt-3 w-full"
-                  loading={rendering === t.code}
-                  onClick={() => renderTemplate(t.code)}
+            <Card key={t.code} className="flex flex-col gap-2 p-4">
+              <div className="flex items-center justify-between">
+                <Tag tone={t.cost === 0 ? 'signal' : 'neutral'}>
+                  {t.cost > 0 && <Icons.lock />} {t.tier}
+                </Tag>
+                <span
+                  className="mono text-[11px]"
+                  style={{
+                    color: t.cost === 0 ? 'var(--signal)' : 'var(--ink-faint)',
+                  }}
                 >
-                  Render
-                </Button>
-                <Button
-                  variant="secondary"
-                  className="mt-2 w-full"
-                  onClick={() => renderTemplate(t.code, true)}
-                >
-                  Force re-render
-                </Button>
-              </CardBody>
+                  {t.cost === 0 ? 'INCLUDED' : `${t.cost} CR`}
+                </span>
+              </div>
+              <div className="text-[14px]" style={{ fontWeight: 500 }}>
+                {t.label}
+              </div>
+              <div className="mono text-[10px] uppercase tracking-[0.10em] text-[color:var(--ink-faint)]">
+                ~{t.pages} PAGES
+              </div>
+              <Button
+                variant="primary"
+                size="sm"
+                type="button"
+                loading={rendering === t.code}
+                onClick={() => renderTemplate(t.code)}
+              >
+                Render
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                type="button"
+                onClick={() => renderTemplate(t.code, true)}
+              >
+                Force re-render
+              </Button>
             </Card>
           ))}
         </div>
       </section>
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold">Past renders</h2>
-        {error && <p className="text-sm text-[color:var(--color-danger)]">{error}</p>}
+        <div className="flex items-end justify-between">
+          <Eyebrow>Past renders</Eyebrow>
+          <span className="mono text-[11px] uppercase tracking-[0.10em] text-[color:var(--ink-faint)]">
+            {reports?.length ?? 0} TOTAL
+          </span>
+        </div>
+        {error && <p className="mt-2 text-[13px] text-[color:var(--danger)]">{error}</p>}
         {reports === null && !error && (
-          <div className="space-y-2">
-            <Skeleton height={48} />
-            <Skeleton height={48} />
+          <div className="mt-3 flex flex-col gap-2">
+            <Skeleton height={56} />
+            <Skeleton height={56} />
           </div>
         )}
         {reports && reports.length === 0 && (
-          <EmptyState
-            title="No reports yet"
-            body="Render any of the templates above to get started."
-          />
+          <Card className="mt-3 p-8">
+            <EmptyState title="No renders yet" body="Render any template above to get started." />
+          </Card>
         )}
         {reports && reports.length > 0 && (
-          <ul className="grid gap-2">
-            {reports.map((r) => {
-              const schedule = schedules.find((s) => s.reportId === r.id && !s.pausedAt);
-              return (
-                <li key={r.id}>
-                  <Card>
-                    <CardBody>
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <Link to={`/reports/${r.id}`} className="min-w-0">
-                          <p className="text-sm font-medium">{r.title}</p>
-                          <p className="text-xs text-[color:var(--color-fg-muted)]">
-                            {formatDateTZ(r.createdAt, 'UTC')} · keys {r.keysHash.slice(0, 12)}…
-                          </p>
+          <Card className="mt-3 overflow-hidden">
+            <table className="cmp">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Created</th>
+                  <th>Keys</th>
+                  <th>Schedule</th>
+                  <th className="text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reports.map((r) => {
+                  const schedule = schedules.find((s) => s.reportId === r.id && !s.pausedAt);
+                  return (
+                    <tr key={r.id}>
+                      <td style={{ fontWeight: 500 }}>
+                        <Link to={`/reports/${r.id}`} className="hover:underline">
+                          {r.title}
                         </Link>
-                        <div className="flex items-center gap-2">
-                          {schedule && (
-                            <Badge tone="success">
-                              next {formatDateTZ(schedule.nextRunAt, 'UTC')}
-                            </Badge>
-                          )}
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => setScheduleOpen(r.id)}
-                          >
-                            Schedule re-render
-                          </Button>
-                        </div>
-                      </div>
-                    </CardBody>
-                  </Card>
-                </li>
-              );
-            })}
-          </ul>
+                      </td>
+                      <td className="mono text-[color:var(--ink-mute)]">
+                        {formatDateTZ(r.createdAt, 'UTC')}
+                      </td>
+                      <td className="mono text-[11px] text-[color:var(--ink-faint)]">
+                        {r.keysHash.slice(0, 12)}…
+                      </td>
+                      <td>
+                        {schedule ? (
+                          <Tag tone="green">next {formatDateTZ(schedule.nextRunAt, 'UTC')}</Tag>
+                        ) : (
+                          <span className="mono text-[11px] text-[color:var(--ink-faint)]">—</span>
+                        )}
+                      </td>
+                      <td className="text-right">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          type="button"
+                          onClick={() => setScheduleOpen(r.id)}
+                        >
+                          Schedule
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </Card>
         )}
       </section>
 

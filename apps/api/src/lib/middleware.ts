@@ -33,18 +33,20 @@ export const accessLogMiddleware: MiddlewareHandler = async (c, next) => {
   }
 };
 
-export const errorBoundaryMiddleware: MiddlewareHandler = async (c, next) => {
-  try {
-    await next();
-  } catch (err) {
-    const log = (c.get('logger') as ReturnType<typeof logger>) ?? logger();
-    if (err instanceof HttpProblem) {
-      log.warn({ err: { message: err.message, status: err.status } }, 'handled HttpProblem');
-      return problemResponse(c, err);
-    }
-    log.error({ err }, 'unhandled error');
-    return problemResponse(c, err as Error);
+/**
+ * Hono's compose() catches throws from sub-handlers and routes them to
+ * app.onError() before any wrapping middleware's try/catch can run, so
+ * errors are translated to RFC7807 problem responses via app.onError.
+ * See app.ts.
+ */
+export const onErrorHandler = (err: Error, c: Parameters<MiddlewareHandler>[0]) => {
+  const log = (c.get('logger') as ReturnType<typeof logger>) ?? logger();
+  if (err instanceof HttpProblem) {
+    log.warn({ err: { message: err.message, status: err.status } }, 'handled HttpProblem');
+    return problemResponse(c, err);
   }
+  log.error({ err }, 'unhandled error');
+  return problemResponse(c, err);
 };
 
 export const securityHeadersMiddleware: MiddlewareHandler = async (c, next) => {

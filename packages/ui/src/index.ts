@@ -3,13 +3,15 @@ export { Button, type ButtonProps } from './Button.js';
 export { Input, Textarea, Field, type FieldProps } from './Input.js';
 export { EmptyState, type EmptyStateProps } from './EmptyState.js';
 export { Skeleton, type SkeletonProps } from './Skeleton.js';
-export {
-  ToastProvider,
-  useToast,
-  type Toast,
-  type ToastVariant,
-} from './Toast.js';
+export { ToastProvider, useToast, type Toast, type ToastVariant } from './Toast.js';
 export { Card, CardHeader, CardBody } from './Card.js';
 export { Badge, type BadgeTone } from './Badge.js';
+export { Tag, type TagTone, type TagProps } from './Tag.js';
+export { Eyebrow } from './Eyebrow.js';
+export { Kbd } from './Kbd.js';
+export { ProgressBar, type ProgressBarProps } from './ProgressBar.js';
+export { Toggle, type ToggleProps } from './Toggle.js';
+export { OtpInput, type OtpInputProps } from './OtpInput.js';
+export { IconLogo, Icons, type IconName, type IconProps } from './Icon.js';
 export { Modal, type ModalProps } from './Modal.js';
 export { Sheet, type SheetProps } from './Sheet.js';

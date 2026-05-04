@@ -40,6 +40,13 @@ export const useEventStream = (opts: UseEventStreamOptions): StreamState => {
   const cancelledRef = useRef<boolean>(false);
   const maxBuffer = opts.maxBufferSize ?? 400;
 
+  // Stash the event-name filter in a ref so callers can pass an inline array
+  // literal without causing this effect to tear down + reconnect on every
+  // parent re-render. The filter is read inside `onAny` at event-arrival
+  // time, so it always sees the freshest list.
+  const filterRef = useRef<string[] | undefined>(opts.events);
+  filterRef.current = opts.events;
+
   useEffect(() => {
     if (opts.enabled === false) return;
     cancelledRef.current = false;
@@ -59,7 +66,8 @@ export const useEventStream = (opts: UseEventStreamOptions): StreamState => {
       };
 
       const onAny = (event: MessageEvent, name: string): void => {
-        if (opts.events && !opts.events.includes(name)) return;
+        const filter = filterRef.current;
+        if (filter && !filter.includes(name)) return;
         let data: unknown;
         try {
           data = JSON.parse(event.data);
@@ -136,7 +144,9 @@ export const useEventStream = (opts: UseEventStreamOptions): StreamState => {
       es?.close();
       setState((s) => ({ ...s, status: 'closed' }));
     };
-  }, [opts.path, opts.enabled, maxBuffer, opts.events]);
+    // Deliberately exclude `opts.events` — it's read via filterRef so callers
+    // can pass an inline array without triggering reconnects every render.
+  }, [opts.path, opts.enabled, maxBuffer]);
 
   return state;
 };

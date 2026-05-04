@@ -1,1 +1,12 @@
-pnpm lint-staged
+#!/usr/bin/env sh
+# GUI git clients (GitHub Desktop, Tower, etc.) run hooks with a minimal
+# PATH that may not include pnpm. Fall back to corepack, which ships with
+# Node 20+ and resolves pnpm via the packageManager field in package.json.
+if command -v pnpm >/dev/null 2>&1; then
+  pnpm exec lint-staged
+elif command -v corepack >/dev/null 2>&1; then
+  corepack pnpm exec lint-staged
+else
+  echo "pre-commit: neither pnpm nor corepack on PATH ($PATH)" >&2
+  exit 1
+fi

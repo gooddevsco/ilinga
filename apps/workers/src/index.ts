@@ -1,3 +1,4 @@
+import './env-bootstrap.js';
 import { startScanWorker } from './scan.js';
 import { startExtractWorker } from './extract.js';
 import { startScrapeWorker } from './scrape.js';
